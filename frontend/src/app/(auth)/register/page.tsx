@@ -89,12 +89,12 @@ function RegisterForm() {
           )}
 
           <Button
-            type="submit"
-            loading={registerMutation.isPending}
-            className="mt-2 w-full"
-          >
-            ثبت‌نام
-          </Button>
+  type="submit"
+  disabled={registerMutation.isPending}
+  className="mt-2 w-full"
+>
+  {registerMutation.isPending ? "در حال ثبت‌نام..." : "ثبت‌نام"}
+</Button>
         </form>
 
         <div className="mt-4 text-center text-sm">

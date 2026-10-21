@@ -10,11 +10,11 @@ export default function HomePage() {
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <div 
           className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[1000px] h-[700px] bg-[#8b5cf6] rounded-full filter blur-[250px] animate-pulse-glow"
-          style={{ opacity: 'var(--bg-glow-opacity, 0.3)', mixBlendMode: 'var(--bg-glow-blend, screen)' }}
+          style={{ opacity: 'var(--bg-glow-opacity, 0.3)' as any, mixBlendMode: 'screen' }}
         ></div>
         <div 
           className="absolute top-[10%] right-[-10%] w-[700px] h-[700px] bg-[#3b82f6] rounded-full filter blur-[200px] animate-pulse-glow"
-          style={{ opacity: 'var(--bg-glow-opacity, 0.3)', mixBlendMode: 'var(--bg-glow-blend, screen)', animationDelay: '2s' }}
+         style={{ opacity: 'var(--bg-glow-opacity, 0.3)' as any, mixBlendMode: 'screen', animationDelay: '2s' }}
         ></div>
         <div 
           className="absolute bottom-[0%] left-[-10%] w-[500px] h-[500px] bg-[#10b981] rounded-full filter blur-[200px] animate-pulse-glow"
