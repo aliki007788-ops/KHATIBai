@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fff8f5;
+  --foreground: #2d2421;
+  --primary: #ff7b54;
+  --secondary: #ffd56b;
+  --accent: #10b981;
+  --card-bg: rgba(255, 255, 255, 0.6);
+  --border-color: rgba(255, 123, 84, 0.2);
+  --bg-glow-opacity: 0.08;
+  --bg-glow-blend: multiply;
+}
+
+html.dark {
+  --background: #050510;
+  --foreground: #f1f5f9;
+  --primary: #8b5cf6;
+  --secondary: #3b82f6;
+  --accent: #10b981;
+  --card-bg: rgba(15, 23, 42, 0.5);
+  --border-color: rgba(139, 92, 246, 0.3);
+  
+  /* افزایش شدت نورپردازی در تم تیره */
+  --bg-glow-opacity: 0.45; 
+  --bg-glow-blend: screen;
+}
+
+html {
+  direction: rtl;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-vazirmatn), system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.5s ease, color 0.5s ease;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.glass-panel {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  border-radius: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+html.dark .glass-panel::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 1.5rem;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.6), transparent 40%, rgba(16, 185, 129, 0.6));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.navbar-glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+html.dark .navbar-glass {
+  background: rgba(5, 5, 16, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  transition: all 0.3s ease;
+}
+html.dark .btn-primary {
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 5s ease-in-out infinite;
+}
+/* انتقال سایدبار به سمت راست در AppShell */
+.app-shell-rtl {
+  flex-direction: row-reverse !important;
+}
