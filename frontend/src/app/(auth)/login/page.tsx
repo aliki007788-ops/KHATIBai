@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/features/auth/auth.service';
 import { useAuthStore } from '@/stores/authStore';
-import { ApiError } from '@/lib/api/errors';
+import { getErrorMessage } from '@/lib/api/errors';
 
 export default function LoginPage() {
-  // ✅ مقادیر پیش‌فرض برای ادمین تنظیم شد
-  const [email, setEmail] = useState('avi@test.com');
-  const [password, setPassword] = useState('avi123456');
+  // اطلاعات پیش‌فرض برای تست (بعداً می‌توانید پاک کنید)
+  const [email, setEmail] = useState('test@khatib.com');
+  const [password, setPassword] = useState('Test1234!');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,16 +34,12 @@ export default function LoginPage() {
       // ۳. ذخیره اطلاعات در استور
       setSession(user, tokenResponse.access_token);
       
-      // ۴. هدایت به داشبورد (اگر کاربر ادمین است، می‌توانید اینجا شرط بگذارید)
+      // ۴. هدایت به داشبورد
       router.push('/dashboard');
       
     } catch (err: any) {
-      // ۵. نمایش خطای واقعی از بک‌اند
-      if (err instanceof ApiError) {
-        setError(err.detail || 'خطا در ورود به سیستم');
-      } else {
-        setError('خطای شبکه. لطفاً اتصال اینترنت خود را بررسی کنید.');
-      }
+      // ۵. استفاده از تابع getErrorMessage برای نمایش پیام خطای مناسب
+      setError(getErrorMessage(err));
       setIsLoading(false);
     }
   };

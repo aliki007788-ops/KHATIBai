@@ -55,9 +55,13 @@ export default function ForgotPasswordPage() {
                 error={errors.email?.message}
                 {...register("email")}
               />
-              <Button type="submit" loading={loading} className="w-full">
-                ارسال لینک بازیابی
-              </Button>
+              <Button 
+  type="submit" 
+  disabled={loading} 
+  className="w-full"
+>
+  {loading ? "در حال ارسال..." : "ارسال لینک بازیابی"}
+</Button>
             </form>
           </>
         )}
