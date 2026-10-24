@@ -30,7 +30,7 @@ function onRefreshed(token: string | null) {
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
-  timeout: 30_000,
+  timeout: 90_000,
   withCredentials: true, // critical for refresh cookie
   headers: {
     "Content-Type": "application/json",
