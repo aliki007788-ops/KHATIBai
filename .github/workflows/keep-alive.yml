@@ -1,10 +1,18 @@
-name: Keep Render Alive
+name: Keep Render Backend Alive (Business Hours)
+
 on:
   schedule:
-    - cron: '*/14 * * * *'  # هر ۱۴ دقیقه یک بار اجرا می‌شود
+    # این cron بر اساس UTC است. ساعت ۸ صبح تهران = ۴:۳۰ صبح UTC
+    # ساعت ۱۰ شب تهران = ۱۸:۳۰ عصر UTC
+    # دستور زیر از دوشنبه تا جمعه، هر ۱۴ دقیقه بین ۴:۳۰ تا ۱۸:۳۰ UTC اجرا می‌شود
+    - cron: '30 4-18 * * 1-5'
+  workflow_dispatch: # این گزینه به شما اجازه می‌دهد به صورت دستی هم اجرا کنید
+
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Render Backend
-        run: curl -s https://khatib-backend.onrender.com > /dev/null
+        run: |
+          # آدرس بک‌اند خود را اینجا جایگزین کنید
+          curl -s -o /dev/null -w "%{http_code}" https://khatib-backend.onrender.com/docs
