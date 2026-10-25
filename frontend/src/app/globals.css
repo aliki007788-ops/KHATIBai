@@ -135,3 +135,37 @@ html.dark .btn-primary {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 .input-field.input-error { border-color: var(--danger); }
+@media print {
+  /* مخفی کردن سایدبار، هدر، منوی پایین و دکمه‌ها */
+  aside, 
+  header, 
+  nav, 
+  .print\:hidden,
+  .fixed,
+  .sticky {
+    display: none !important;
+  }
+
+  /* تنظیم عرض صفحه برای چاپ */
+  body {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* حذف سایه و حاشیه‌های اضافی از فاکتور */
+  .glass-panel {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    width: 100% !important;
+  }
+
+  /* حذف فاصله‌های اضافی */
+  main {
+    padding: 0 !important;
+  }
+}

@@ -1,6 +1,6 @@
 """
 SQLAlchemy models — Full consolidated models for Khatib.
-Identity & Auth + Billing + AI + Speech + Learning + Privacy domains.
+Identity & Auth + Billing + AI + Speech + Learning + Privacy + Finance.
 """
 from __future__ import annotations
 
@@ -146,6 +146,16 @@ class PrivacyRequestStatus(str, enum.Enum):
     processing = "processing"
     completed = "completed"
     failed = "failed"
+
+
+# ✅ اضافه شد: دسته‌بندی هزینه‌ها
+class ExpenseCategory(str, enum.Enum):
+    server = "server"
+    ai_api = "ai_api"
+    marketing = "marketing"
+    salary = "salary"
+    tools = "tools"
+    other = "other"
 
 
 # =========================================================
@@ -382,6 +392,25 @@ class UsageCounter(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "period_start", name="uq_usage_user_period"),
     )
+
+
+# =========================================================
+# ✅ Finance / Accounting (NEW)
+# =========================================================
+
+class Expense(Base):
+    __tablename__ = "expenses"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    category: Mapped[ExpenseCategory] = mapped_column(Enum(ExpenseCategory), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    amount_toman: Mapped[int] = mapped_column(Integer, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    expense_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False, index=True)
+    created_by: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
 
 
 # =========================================================

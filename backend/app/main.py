@@ -34,6 +34,7 @@ from app.routers import progress as progress_router
 from app.routers import speech as speech_router
 from app.routers import translate as translate_router
 from app.routers import coach_ws as coach_ws_router
+from app.routers import admin_finance as admin_finance_router  # ✅ اضافه شد
 
 logger = logging.getLogger("khatib")
 
@@ -143,6 +144,7 @@ def create_app() -> FastAPI:
     app.include_router(eitaa_router.router)
     app.include_router(translate_router.router)
     app.include_router(coach_ws_router.router)
+    app.include_router(admin_finance_router.router)  # ✅ اضافه شد
 
     _override_openapi_version(app, "3.0.3")
 
