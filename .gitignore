@@ -31,3 +31,19 @@ Thumbs.db
 *.key
 secrets.json*.zip
 *.zip
+# Test files (contain API keys)
+test_iotype.py
+test_iotype_simple.py
+test-mic.html
+
+# Audio files
+*.mp3
+*.wav
+*.webm
+*.rar
+*.zip
+
+# Backend uploads
+backend/uploads/
+backend/data/
+test_openai.py
