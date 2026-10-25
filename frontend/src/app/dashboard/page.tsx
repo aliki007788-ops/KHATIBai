@@ -1,102 +1,204 @@
 "use client";
 
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/AppShell';
+import { AuthGuard } from '@/components/layout/AuthGuard';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { apiClient } from '@/lib/api/client';
+import { endpoints } from '@/lib/api/endpoints';
+import { useAuthStore } from '@/stores/authStore';
+import { toPersianNumber } from '@/lib/utils/number';
+
+interface Speech {
+  id: string;
+  title: string;
+  status: string;
+  score: number | null;
+  created_at: string;
+  mode: string;
+}
+
+interface ProgressSummary {
+  overall_progress: number;
+  confidence_score: number;
+  clarity_score: number;
+  total_practices: number;
+}
 
 export default function DashboardPage() {
-  const user = { name: 'علی', plan: 'حرفه‌ای' };
+  const user = useAuthStore((state) => state.user);
+
+  // دریافت آمار پیشرفت
+  const { data: progress, isLoading: progressLoading } = useQuery<ProgressSummary>({
+    queryKey: ['progress', 'summary'],
+    queryFn: async () => {
+      const res = await apiClient.get(endpoints.progress.summary);
+      return res.data;
+    },
+  });
+
+  // دریافت آخرین تمرین‌ها
+  const { data: speeches, isLoading: speechesLoading, isError: speechesError, refetch: refetchSpeeches } = useQuery<Speech[]>({
+    queryKey: ['speech', 'list'],
+    queryFn: async () => {
+      const res = await apiClient.get(endpoints.speech.list);
+      return res.data;
+    },
+  });
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('fa-IR', {
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return dateString;
+    }
+  };
 
   return (
-    <AppShell>
-      <section className="mb-8 animate-fade-in">
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">سلام {user.name} عزیز 👋</h1>
-        <p className="text-[var(--foreground)]/60 text-lg">آماده‌ای تا امروز صدای خودت رو متحول کنی؟</p>
-      </section>
+    <AuthGuard>
+      <AppShell>
+        <section className="mb-8 animate-fade-in">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">
+            سلام {user?.name || 'کاربر'} عزیز 👋
+          </h1>
+          <p className="text-[var(--foreground)]/60 text-lg">آماده‌ای تا امروز صدای خودت رو متحول کنی؟</p>
+        </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Link href="/practice" className="glass-panel p-8 rounded-[2rem] group hover:-translate-y-2 transition-all duration-300 hover:shadow-[0_0_40px_rgba(139,92,246,0.2)] border border-[var(--border-color)]">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#8b5cf6] to-[#3b82f6] flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-            <span className="text-3xl">🎙️</span>
-          </div>
-          <h3 className="text-xl font-bold mb-2">استودیوی سخنرانی</h3>
-          <p className="text-sm text-[var(--foreground)]/60">شروع یک جلسه تمرین زنده با بازخورد هوش مصنوعی</p>
-        </Link>
-
-        <Link href="/translator" className="glass-panel p-8 rounded-[2rem] group hover:-translate-y-2 transition-all duration-300 hover:shadow-[0_0_40px_rgba(16,185,129,0.2)] border border-[var(--border-color)]">
-          <div className="w-16 h-16 rounded-2xl bg-[#10b981] flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-            <span className="text-3xl">🌐</span>
-          </div>
-          <h3 className="text-xl font-bold mb-2">مترجم زنده</h3>
-          <p className="text-sm text-[var(--foreground)]/60">ترجمه همزمان صوتی بین فارسی و عراقی</p>
-        </Link>
-
-        <Link href="/learn" className="glass-panel p-8 rounded-[2rem] group hover:-translate-y-2 transition-all duration-300 hover:shadow-[0_0_40px_rgba(59,130,246,0.2)] border border-[var(--border-color)]">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#3b82f6] to-[#10b981] flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-            <span className="text-3xl">🗣️</span>
-          </div>
-          <h3 className="text-xl font-bold mb-2">آموزش عراقی</h3>
-          <p className="text-sm text-[var(--foreground)]/60">ادامه یادگیری لهجه اصیل عراقی</p>
-        </Link>
-      </section>
-
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="glass-panel p-8 rounded-[2rem]">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold">پیشرفت سخنرانی</h3>
-            <span className="text-sm text-[var(--accent)] bg-[var(--accent)]/10 px-3 py-1 rounded-full">+۵٪ این هفته</span>
-          </div>
-          <div className="flex items-center gap-8">
-            <div className="relative w-32 h-32 flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-white/10" />
-                <circle cx="64" cy="64" r="56" stroke="url(#gradient)" strokeWidth="12" fill="transparent" strokeDasharray="351.8" strokeDashoffset="70.3" className="transition-all duration-1000 ease-out" strokeLinecap="round" />
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#8b5cf6" />
-                    <stop offset="100%" stopColor="#3b82f6" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute text-2xl font-bold">۸۰٪</div>
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Link href="/practice" className="glass-panel p-8 rounded-[2rem] group hover:-translate-y-2 transition-all duration-300 hover:shadow-[0_0_40px_rgba(139,92,246,0.2)] border border-[var(--border-color)]">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#8b5cf6] to-[#3b82f6] flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
+              <span className="text-3xl">🎙️</span>
             </div>
-            <div className="flex-1 space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-[var(--foreground)]/60">اعتماد به نفس</span><span className="text-[#8b5cf6]">عالی</span></div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-[#8b5cf6] w-[85%]"></div></div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-[var(--foreground)]/60">وضوح کلام</span><span className="text-[#3b82f6]">خوب</span></div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-[#3b82f6] w-[75%]"></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
+            <h3 className="text-xl font-bold mb-2">استودیوی سخنرانی</h3>
+            <p className="text-sm text-[var(--foreground)]/60">شروع یک جلسه تمرین زنده با بازخورد هوش مصنوعی</p>
+          </Link>
 
-        <div className="glass-panel p-8 rounded-[2rem]">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold">آخرین فعالیت‌ها</h3>
-            <Link href="/history" className="text-sm text-[var(--primary)] hover:underline">مشاهده همه</Link>
-          </div>
-          <div className="space-y-4">
-            {[
-              { icon: '🎙️', title: 'تمرین سخنرانی: ارائه شغلی', time: '۲ ساعت پیش', score: '۹۰' },
-              { icon: '🌐', title: 'ترجمه زنده: مکالمه تجاری', time: 'دیروز', score: 'عالی' },
-              { icon: '🗣️', title: 'درس ۵: احوالپرسی عراقی', time: '۲ روز پیش', score: '۸۵' },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/10">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-xl">{item.icon}</div>
+          <Link href="/translator" className="glass-panel p-8 rounded-[2rem] group hover:-translate-y-2 transition-all duration-300 hover:shadow-[0_0_40px_rgba(16,185,129,0.2)] border border-[var(--border-color)]">
+            <div className="w-16 h-16 rounded-2xl bg-[#10b981] flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
+              <span className="text-3xl">🌐</span>
+            </div>
+            <h3 className="text-xl font-bold mb-2">مترجم زنده</h3>
+            <p className="text-sm text-[var(--foreground)]/60">ترجمه همزمان صوتی بین فارسی و عراقی</p>
+          </Link>
+
+          <Link href="/learn" className="glass-panel p-8 rounded-[2rem] group hover:-translate-y-2 transition-all duration-300 hover:shadow-[0_0_40px_rgba(59,130,246,0.2)] border border-[var(--border-color)]">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#3b82f6] to-[#10b981] flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
+              <span className="text-3xl">🗣️</span>
+            </div>
+            <h3 className="text-xl font-bold mb-2">آموزش عراقی</h3>
+            <p className="text-sm text-[var(--foreground)]/60">ادامه یادگیری لهجه اصیل عراقی</p>
+          </Link>
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* کارت پیشرفت */}
+          <div className="glass-panel p-8 rounded-[2rem]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">پیشرفت سخنرانی</h3>
+              {progress && (
+                <span className="text-sm text-[var(--accent)] bg-[var(--accent)]/10 px-3 py-1 rounded-full">
+                  {toPersianNumber(progress.total_practices)} تمرین
+                </span>
+              )}
+            </div>
+
+            {progressLoading && <Skeleton className="h-40 rounded-xl" />}
+
+            {progress && (
+              <div className="flex items-center gap-8">
+                <div className="relative w-32 h-32 flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-white/10" />
+                    <circle
+                      cx="64" cy="64" r="56"
+                      stroke="url(#gradient)" strokeWidth="12" fill="transparent"
+                      strokeDasharray="351.8"
+                      strokeDashoffset={351.8 - (351.8 * progress.overall_progress) / 100}
+                      className="transition-all duration-1000 ease-out"
+                      strokeLinecap="round"
+                    />
+                    <defs>
+                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#8b5cf6" />
+                        <stop offset="100%" stopColor="#3b82f6" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div className="absolute text-2xl font-bold">{toPersianNumber(progress.overall_progress)}٪</div>
+                </div>
+                <div className="flex-1 space-y-4">
                   <div>
-                    <div className="font-medium text-sm">{item.title}</div>
-                    <div className="text-xs text-[var(--foreground)]/40">{item.time}</div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-[var(--foreground)]/60">اعتماد به نفس</span>
+                      <span className="text-[#8b5cf6]">{toPersianNumber(progress.confidence_score)}٪</span>
+                    </div>
+                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#8b5cf6]" style={{ width: `${progress.confidence_score}%` }}></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-[var(--foreground)]/60">وضوح کلام</span>
+                      <span className="text-[#3b82f6]">{toPersianNumber(progress.clarity_score)}٪</span>
+                    </div>
+                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#3b82f6]" style={{ width: `${progress.clarity_score}%` }}></div>
+                    </div>
                   </div>
                 </div>
-                <div className="text-sm font-bold text-[var(--accent)]">{item.score}</div>
               </div>
-            ))}
+            )}
           </div>
-        </div>
-      </section>
-    </AppShell>
+
+          {/* کارت آخرین فعالیت‌ها */}
+          <div className="glass-panel p-8 rounded-[2rem]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">آخرین فعالیت‌ها</h3>
+              <Link href="/history" className="text-sm text-[var(--primary)] hover:underline">مشاهده همه</Link>
+            </div>
+
+            {speechesLoading && (
+              <div className="space-y-4">
+                <Skeleton className="h-16 rounded-xl" />
+                <Skeleton className="h-16 rounded-xl" />
+                <Skeleton className="h-16 rounded-xl" />
+              </div>
+            )}
+
+            {speechesError && <ErrorState onRetry={() => refetchSpeeches()} />}
+
+            {speeches && speeches.length === 0 && (
+              <div className="text-center py-8 text-[var(--foreground)]/50">
+                هنوز فعالیتی ثبت نشده است.
+              </div>
+            )}
+
+            {speeches && speeches.length > 0 && (
+              <div className="space-y-4">
+                {speeches.slice(0, 3).map((speech) => (
+                  <div key={speech.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-xl">🎙️</div>
+                      <div>
+                        <div className="font-medium text-sm">{speech.title}</div>
+                        <div className="text-xs text-[var(--foreground)]/40">{formatDate(speech.created_at)}</div>
+                      </div>
+                    </div>
+                    <div className="text-sm font-bold text-[var(--accent)]">
+                      {speech.score ? toPersianNumber(speech.score) : '—'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </AppShell>
+    </AuthGuard>
   );
 }

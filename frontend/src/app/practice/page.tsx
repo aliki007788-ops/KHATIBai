@@ -7,14 +7,15 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useCreateAudioSpeech, useSpeech } from "@/features/speech/hooks";
 import { toPersianNumber } from "@/lib/utils/number";
 import { 
-  Mic, Square, RefreshCw, Lightbulb, CheckCircle2, AlertCircle, 
-  BookOpen, Zap, Speaker, MessageSquare, Gauge, FileText
+  Mic, Square, Lightbulb, Gauge
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 type PracticeMode = "free" | "script" | "impromptu" | "presentation";
 
-const WS_URL = "ws://10.124.3.146:8000/ws/coach";
+// آدرس WebSocket رو از env می‌خونیم تا هاردکد نشه
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const WS_URL = API_BASE.replace(/^http/, "ws") + "/ws/coach";
 
 export default function PracticePage() {
   const [mode, setMode] = useState<PracticeMode>("free");
@@ -38,14 +39,18 @@ export default function PracticePage() {
     wsRef.current = ws;
 
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "conversation.item.input_audio_transcription.completed") {
-        setLiveFeedback("📝 شما گفتید: " + data.transcript);
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "conversation.item.input_audio_transcription.completed") {
+          setLiveFeedback("📝 شما گفتید: " + data.transcript);
+        }
+      } catch {
+        // ignore parse errors
       }
     };
 
-    ws.onerror = (e) => {
-      console.error("WebSocket error:", e);
+    ws.onerror = () => {
+      console.error("WebSocket error");
       setLiveFeedback("خطا در اتصال به مربی آنلاین.");
     };
 
@@ -124,6 +129,14 @@ export default function PracticePage() {
   const isProcessing = createAudio.isPending || (speechData && (speechData.status === "pending" || speechData.status === "processing"));
   const isCompleted = speechData && speechData.status === "completed";
 
+  // نگاشت کلیدهای بک‌اند به برچسب‌های فارسی
+  const dimensionLabels: Record<string, string> = {
+    confidence: "اعتماد به نفس",
+    pace: "سرعت گفتار",
+    clarity: "وضوح",
+    tone: "لحن",
+  };
+
   return (
     <AppShell>
       <div className="max-w-7xl mx-auto w-full flex flex-col gap-6 p-4 md:p-6">
@@ -168,18 +181,27 @@ export default function PracticePage() {
             <div className="glass-panel p-6 rounded-[2rem]">
               <h3 className="text-lg font-semibold mb-4">تحلیل ابعاد</h3>
               {["confidence", "pace", "clarity", "tone"].map((key) => {
-                const value = speechData?.dimensions?.[key] ?? null;
+                // از dimension_scores استفاده می‌کنیم (نام واقعی فیلد بک‌اند)
+                const value = speechData?.dimension_scores?.[key] ?? null;
+                const label = dimensionLabels[key] ?? key;
                 return (
                   <div key={key} className="mb-4">
-                    <div className="flex justify-between text-sm mb-2"><span>{key}</span><span>{value != null ? `${toPersianNumber(Math.round(value))}٪` : "—"}</span></div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-blue-500" style={{ width: value != null ? `${value}%` : "0%" }} /></div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>{label}</span>
+                      <span>{value != null ? `${toPersianNumber(Math.round(value))}٪` : "—"}</span>
+                    </div>
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500" style={{ width: value != null ? `${value}%` : "0%" }} />
+                    </div>
                   </div>
                 );
               })}
             </div>
             <div className="glass-panel p-6 rounded-[2rem] border-l-4 border-l-[var(--accent)]">
               <h3 className="text-sm text-[var(--accent)] mb-2 flex items-center gap-2"><Lightbulb className="w-4 h-4" /> پیشنهاد مربی</h3>
-              <p className="text-sm text-gray-600">{speechData?.coach_tip ?? "برای دریافت پیشنهاد، تمرین کنید."}</p>
+              <p className="text-sm text-gray-600">
+                {speechData?.next_practice ?? speechData?.structure_notes ?? "برای دریافت پیشنهاد، تمرین کنید."}
+              </p>
             </div>
           </div>
         </div>

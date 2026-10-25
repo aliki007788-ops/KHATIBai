@@ -1,6 +1,7 @@
 /** Aligned with backend: app/schemas/billing.py & core/plans.py */
 
 import type { PlanId } from "./auth";
+export type { PlanId };
 
 export type PaymentStatus =
   | "created"

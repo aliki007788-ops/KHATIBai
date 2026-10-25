@@ -1,9 +1,9 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'glass';
+  variant?: 'primary' | 'secondary' | 'glass' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
-  loading?: boolean; // ✅ اضافه شد
+  loading?: boolean;
 }
 
 export function Button({ 
@@ -22,6 +22,8 @@ export function Button({
     primary: "btn-primary text-white shadow-lg hover:shadow-xl",
     secondary: "border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800",
     glass: "glass-panel hover:bg-white/10 dark:hover:bg-slate-800/50",
+    ghost: "hover:bg-gray-100 dark:hover:bg-gray-800 text-[var(--foreground)]",
+    danger: "bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl",
   };
 
   const sizes = {

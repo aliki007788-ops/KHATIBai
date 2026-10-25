@@ -20,6 +20,10 @@ export interface Speech {
   next_practice: string | null;
   created_at: string;
   completed_at: string | null;
+  
+  // فیلدهای اضافی که در practice/page.tsx استفاده می‌شن
+  dimensions?: Record<string, number> | null;
+  coach_tip?: string | null;
 }
 
 export interface SpeechListItem {

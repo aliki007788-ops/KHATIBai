@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
+import { useAuthStore } from '@/stores/authStore';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
 export default function LiveTranslatorPage() {
   const [mode, setMode] = useState<'fa-to-ar' | 'ar-to-fa'>('fa-to-ar');
@@ -10,6 +13,7 @@ export default function LiveTranslatorPage() {
   const [translatedText, setTranslatedText] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
@@ -95,21 +99,64 @@ export default function LiveTranslatorPage() {
     }
   };
 
-  const handleTranslation = (text: string, currentMode: 'fa-to-ar' | 'ar-to-fa') => {
+  const handleTranslation = async (text: string, currentMode: 'fa-to-ar' | 'ar-to-fa') => {
     setIsTranslating(true);
+    setErrorMessage('');
     recognitionRef.current?.stop();
 
-    setTimeout(() => {
-      const mockTranslation = currentMode === 'fa-to-ar' 
-        ? "هذا ترجمة عراقية تجريبية: " + text 
-        : "این یک ترجمه فارسی آزمایشی است: " + text;
+    try {
+      // استخراج توکن از authStore (Zustand)
+      const accessToken = useAuthStore.getState().accessToken;
+
+      if (!accessToken) {
+        throw new Error('لطفاً ابتدا وارد حساب کاربری شوید.');
+      }
+
+      const direction = currentMode === 'fa-to-ar' ? 'fa_to_iq' : 'iq_to_fa';
+
+      const response = await fetch(`${BASE_URL}/api/translate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ text, direction }),
+      });
+
+      if (!response.ok) {
+        // اگه 401 بود، یعنی توکن منقضی شده — کاربر باید لاگین کنه
+        if (response.status === 401) {
+          throw new Error('نشست شما منقضی شده است. لطفاً دوباره وارد شوید.');
+        }
+        // اگه 502 بود، یعنی سرویس AI خطا داده
+        if (response.status === 502) {
+          throw new Error('سرویس ترجمه در حال حاضر در دسترس نیست. لطفاً دوباره تلاش کنید.');
+        }
+        throw new Error(`خطای سرور: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const translated = data.translated_text || '';
       
-      setTranslatedText(mockTranslation);
+      if (!translated) {
+        throw new Error('ترجمه‌ای دریافت نشد.');
+      }
+      
+      setTranslatedText(translated);
       setIsTranslating(false);
       
       const targetLang = currentMode === 'fa-to-ar' ? 'ar-IQ' : 'fa-IR';
-      speakText(mockTranslation, targetLang);
-    }, 800);
+      speakText(translated, targetLang);
+    } catch (error: any) {
+      console.error('Translation error:', error);
+      setIsTranslating(false);
+      setErrorMessage(error.message || 'خطا در ترجمه. لطفاً دوباره تلاش کنید.');
+      setTranslatedText('');
+      // دوباره ضبط رو شروع کن اگه در حال گوش دادن بود
+      if (isListeningRef.current) {
+        try { recognitionRef.current?.start(); } catch(e) {}
+      }
+    }
   };
 
   const toggleListening = () => {
@@ -118,10 +165,12 @@ export default function LiveTranslatorPage() {
       setIsListening(false);
       setSourceText('');
       setTranslatedText('');
+      setErrorMessage('');
       window.speechSynthesis.cancel();
     } else {
       setSourceText('');
       setTranslatedText('');
+      setErrorMessage('');
       const lang = mode === 'fa-to-ar' ? 'fa-IR' : 'ar-IQ';
       if (recognitionRef.current) {
         recognitionRef.current.lang = lang;
@@ -141,6 +190,7 @@ export default function LiveTranslatorPage() {
     window.speechSynthesis.cancel();
     setSourceText('');
     setTranslatedText('');
+    setErrorMessage('');
     setMode(mode === 'fa-to-ar' ? 'ar-to-fa' : 'fa-to-ar');
   };
 
@@ -250,6 +300,13 @@ export default function LiveTranslatorPage() {
             </p>
           </div>
         </div>
+
+        {/* نمایش خطا */}
+        {errorMessage && (
+          <div className="w-full glass-panel p-4 rounded-xl border-r-4 border-r-red-500 bg-red-500/10">
+            <p className="text-sm text-red-400 font-medium">⚠️ {errorMessage}</p>
+          </div>
+        )}
 
       </div>
     </AppShell>

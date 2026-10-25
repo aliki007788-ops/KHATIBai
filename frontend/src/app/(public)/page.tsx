@@ -18,7 +18,7 @@ export default function HomePage() {
         ></div>
         <div 
           className="absolute bottom-[0%] left-[-10%] w-[500px] h-[500px] bg-[#10b981] rounded-full filter blur-[200px] animate-pulse-glow"
-          style={{ opacity: 'var(--bg-glow-opacity, 0.2)', mixBlendMode: 'var(--bg-glow-blend, screen)', animationDelay: '4s' }}
+          style={{ opacity: 'var(--bg-glow-opacity, 0.2)' as any, mixBlendMode: 'var(--bg-glow-blend, screen)' as any, animationDelay: '4s' }}
         ></div>
         
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30"></div>
