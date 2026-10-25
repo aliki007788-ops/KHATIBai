@@ -61,12 +61,12 @@ export default function LoginPage() {
         <div style={{
           width: '100%',
           maxWidth: '450px',
-          backgroundColor: 'rgba(255, 255, 255, 0.4)',
+          backgroundColor: 'var(--card-bg)',
           backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(0, 0, 0, 0.1)',
+          border: '1px solid var(--border-color)',
           borderRadius: '20px',
           padding: '40px 30px',
-          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.1)',
+          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.25)',
         }}>
           
           <div style={{ textAlign: 'center', marginBottom: '30px' }}>
@@ -76,12 +76,12 @@ export default function LoginPage() {
 
           {/* نمایش خطا */}
           {error && (
-            <div style={{ 
-              backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-              border: '1px solid rgba(239, 68, 68, 0.3)', 
-              color: '#ef4444', 
-              padding: '12px', 
-              borderRadius: '10px', 
+            <div style={{
+              backgroundColor: 'var(--danger-bg)',
+              border: '1px solid var(--danger-border)',
+              color: 'var(--danger)',
+              padding: '12px',
+              borderRadius: '10px',
               marginBottom: '20px',
               fontSize: '14px',
               textAlign: 'center'
@@ -93,19 +93,19 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px' }}>ایمیل</label>
-              <input 
-                type="email" 
-                placeholder="example@email.com" 
+              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--foreground)' }}>ایمیل</label>
+              <input
+                type="email"
+                placeholder="example@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(0,0,0,0.1)',
-                  backgroundColor: 'white',
-                  color: 'black',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--input-bg)',
+                  color: 'var(--input-text)',
                   fontSize: '16px',
                   outline: 'none',
                 }}
@@ -115,12 +115,12 @@ export default function LoginPage() {
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px' }}>رمز عبور</label>
-              
+              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--foreground)' }}>رمز عبور</label>
+
               <div style={{ position: 'relative' }}>
-                <input 
-                  type={showPassword ? "text" : "password"} 
-                  placeholder="••••••••" 
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{
@@ -128,16 +128,16 @@ export default function LoginPage() {
                     padding: '12px 16px',
                     paddingLeft: '45px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(0,0,0,0.1)',
-                    backgroundColor: 'white',
-                    color: 'black',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--input-bg)',
+                    color: 'var(--input-text)',
                     fontSize: '16px',
                     outline: 'none',
                   }}
                   required
                   dir="ltr"
                 />
-                
+
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -149,7 +149,7 @@ export default function LoginPage() {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#666',
+                    color: 'var(--foreground-muted)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -202,21 +202,21 @@ export default function LoginPage() {
           </form>
 
           <div style={{ display: 'flex', alignItems: 'center', margin: '30px 0' }}>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.1)' }}></div>
+            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
             <span style={{ padding: '0 10px', fontSize: '14px', color: 'var(--foreground)', opacity: 0.5 }}>یا</span>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.1)' }}></div>
+            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
           </div>
 
-          <button 
+          <button
             type="button"
             disabled
             style={{
               width: '100%',
               padding: '12px',
               borderRadius: '10px',
-              border: '1px solid rgba(0,0,0,0.1)',
-              backgroundColor: 'rgba(255,255,255,0.5)',
-              color: 'black',
+              border: '1px solid var(--border-color)',
+              backgroundColor: 'var(--card-bg)',
+              color: 'var(--foreground)',
               fontSize: '16px',
               fontWeight: 'bold',
               cursor: 'not-allowed',

@@ -47,13 +47,23 @@ def _log_audit(db: Session, user_id: str | None, action: str, detail: str, ip: s
     db.add(AuditLog(user_id=user_id, action=action, detail=detail, ip_address=ip))
 
 
+def _refresh_cookie_samesite() -> str:
+    # Frontend (Vercel) and backend (Render) are different origins, so the
+    # browser will only attach this cookie to cross-site fetch/XHR requests
+    # when SameSite=None — but SameSite=None is only honored by browsers if
+    # Secure is also set, which is why this is tied to cookie_secure rather
+    # than hardcoded. In local dev (cookie_secure=False, same-origin-ish
+    # localhost setup) "lax" still works fine.
+    return "none" if settings.cookie_secure else "lax"
+
+
 def _set_refresh_cookie(response: Response, raw_token: str) -> None:
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=raw_token,
         httponly=True,
         secure=settings.cookie_secure,
-        samesite="lax",
+        samesite=_refresh_cookie_samesite(),
         domain=settings.cookie_domain or None,
         max_age=settings.refresh_token_expire_days * 24 * 3600,
         path="/api/auth",
@@ -65,6 +75,7 @@ def _clear_refresh_cookie(response: Response) -> None:
         key=REFRESH_COOKIE_NAME,
         domain=settings.cookie_domain or None,
         path="/api/auth",
+        samesite=_refresh_cookie_samesite(),
     )
 
 

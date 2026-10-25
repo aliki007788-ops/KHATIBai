@@ -31,13 +31,23 @@ function RegisterForm() {
   const registerMutation = useRegister();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+    <div
+      className="flex min-h-screen items-center justify-center p-4"
+      style={{ backgroundColor: "var(--background)" }}
+    >
       <Card className="w-full max-w-sm">
-        <h1 className="mb-1 text-xl font-bold text-gray-900">ثبت‌نام در خطیب</h1>
-        <p className="mb-4 text-sm text-gray-500">حساب کاربری جدید بسازید</p>
+        <h1 className="mb-1 text-xl font-bold" style={{ color: "var(--foreground)" }}>
+          ثبت‌نام در خطیب
+        </h1>
+        <p className="mb-4 text-sm" style={{ color: "var(--foreground-muted)" }}>
+          حساب کاربری جدید بسازید
+        </p>
 
         {selectedPlan && (
-          <div className="mb-5 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
+          <div
+            className="mb-5 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs"
+            style={{ backgroundColor: "var(--info-bg)", borderColor: "var(--info-border)", color: "var(--info-text)" }}
+          >
             <Sparkles className="h-4 w-4 flex-shrink-0" />
             پس از ثبت‌نام، برای پلن «{selectedPlan.name}» وارد شوید و پرداخت را ادامه دهید
           </div>
@@ -74,18 +84,18 @@ function RegisterForm() {
             {...register("password_confirmation")}
           />
 
-          <label className="flex items-start gap-2 text-sm text-gray-600">
+          <label className="flex items-start gap-2 text-sm" style={{ color: "var(--foreground-muted)" }}>
             <input type="checkbox" className="mt-0.5" {...register("accept_terms")} />
             <span>
               با{" "}
-              <Link href="/terms" className="text-blue-600 hover:underline">
+              <Link href="/terms" style={{ color: "var(--primary)" }} className="hover:underline">
                 شرایط استفاده
               </Link>{" "}
               موافقم
             </span>
           </label>
           {errors.accept_terms && (
-            <span className="text-xs text-red-600">{errors.accept_terms.message}</span>
+            <span className="text-xs" style={{ color: "var(--danger)" }}>{errors.accept_terms.message}</span>
           )}
 
           <Button
@@ -100,7 +110,8 @@ function RegisterForm() {
         <div className="mt-4 text-center text-sm">
           <Link
             href={planId ? `/login?plan=${planId}` : "/login"}
-            className="text-blue-600 hover:underline"
+            style={{ color: "var(--primary)" }}
+            className="hover:underline"
           >
             حساب دارید؟ وارد شوید
           </Link>

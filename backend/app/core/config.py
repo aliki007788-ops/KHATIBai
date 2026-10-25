@@ -45,7 +45,11 @@ class Settings(BaseSettings):
 
     # ---- CORS ----
     cors_origins: str = Field(default="")
-    allowed_hosts: str = Field(default="localhost,127.0.0.1")
+    # Includes wildcard patterns for Render/Vercel's auto-generated hostnames
+    # as a safety net when the frontend+backend are deployed as two separate
+    # services on those platforms. Override ALLOWED_HOSTS with your real
+    # domain(s) once you have a custom domain.
+    allowed_hosts: str = Field(default="localhost,127.0.0.1,*.onrender.com,*.vercel.app")
 
     # ---- AI ----
     ai_base_url: str = Field(default="https://api.openai.com/v1")

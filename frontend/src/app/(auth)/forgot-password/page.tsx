@@ -40,12 +40,17 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+    <div
+      className="flex min-h-screen items-center justify-center p-4"
+      style={{ backgroundColor: "var(--background)" }}
+    >
       <Card className="w-full max-w-sm">
         {status === "idle" && (
           <>
-            <h1 className="mb-1 text-xl font-bold text-gray-900">بازیابی رمز عبور</h1>
-            <p className="mb-6 text-sm text-gray-500">
+            <h1 className="mb-1 text-xl font-bold" style={{ color: "var(--foreground)" }}>
+              بازیابی رمز عبور
+            </h1>
+            <p className="mb-6 text-sm" style={{ color: "var(--foreground-muted)" }}>
               ایمیل خود را وارد کنید تا لینک بازیابی برایتان ارسال شود
             </p>
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -68,11 +73,14 @@ export default function ForgotPasswordPage() {
 
         {status === "sent" && (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 text-green-500">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-2xl"
+              style={{ backgroundColor: "var(--info-bg)", color: "var(--accent)" }}
+            >
               <MailCheck className="h-7 w-7" />
             </div>
-            <h2 className="font-bold text-gray-900">لینک بازیابی ارسال شد</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="font-bold" style={{ color: "var(--foreground)" }}>لینک بازیابی ارسال شد</h2>
+            <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>
               اگر حسابی با «{getValues("email")}» وجود داشته باشد، لینک ارسال می‌شود.
             </p>
           </div>
@@ -80,16 +88,20 @@ export default function ForgotPasswordPage() {
 
         {status === "unavailable" && (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-2xl"
+              style={{ backgroundColor: "var(--danger-bg)", color: "var(--danger)" }}
+            >
               <Construction className="h-7 w-7" />
             </div>
-            <h2 className="font-bold text-gray-900">این قابلیت به‌زودی راه‌اندازی می‌شود</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="font-bold" style={{ color: "var(--foreground)" }}>این قابلیت به‌زودی راه‌اندازی می‌شود</h2>
+            <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>
               لطفاً برای بازیابی حساب با پشتیبانی تماس بگیرید.
             </p>
             <a
               href="mailto:support@khatib.app"
-              className="mt-2 text-sm font-medium text-blue-600 hover:underline"
+              className="mt-2 text-sm font-medium hover:underline"
+              style={{ color: "var(--primary)" }}
             >
               support@khatib.app
             </a>
@@ -99,7 +111,8 @@ export default function ForgotPasswordPage() {
         <div className="mt-6 text-center">
           <Link
             href="/login"
-            className="flex items-center justify-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+            className="flex items-center justify-center gap-1 text-sm hover:opacity-80"
+            style={{ color: "var(--foreground-muted)" }}
           >
             <ArrowRight className="h-4 w-4" /> بازگشت به ورود
           </Link>

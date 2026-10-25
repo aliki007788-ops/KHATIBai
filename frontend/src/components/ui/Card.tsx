@@ -1,13 +1,11 @@
 import { cn } from "@/lib/utils/cn";
 import { HTMLAttributes } from "react";
 
-export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+export function Card({ className, style, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn(
-        "rounded-xl border border-gray-200 bg-white p-5 shadow-sm",
-        className
-      )}
+      className={cn("rounded-xl border p-5 shadow-sm", className)}
+      style={{ backgroundColor: "var(--card-bg-solid)", borderColor: "var(--border-color)", ...style }}
       {...props}
     />
   );
@@ -19,9 +17,14 @@ export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElemen
 
 export function CardTitle({
   className,
+  style,
   ...props
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3 className={cn("text-base font-semibold text-gray-900", className)} {...props} />
+    <h3
+      className={cn("text-base font-semibold", className)}
+      style={{ color: "var(--foreground)", ...style }}
+      {...props}
+    />
   );
 }

@@ -13,9 +13,22 @@ services:
         generateValue: true
       - key: PASSWORD_PEPPER
         generateValue: true
+      # Set this to your actual Vercel PRODUCTION domain (Project Settings →
+      # Domains in Vercel — NOT a preview-deployment URL with a random hash,
+      # those change on every deploy and will break CORS).
       - key: CORS_ORIGINS
-        value: https://khati-ltuvglv57-aki-c2e06dad.vercel.app
+        sync: false
       - key: FRONTEND_URL
-        value: https://khati-ltuvglv57-aki-c2e06dad.vercel.app
+        sync: false
+      # "staging": keeps the deploy runnable on free-tier infra (SQLite,
+      # local disk storage, demo payment) without the hard production
+      # safety checks (which require real Postgres/S3/Zarinpal credentials
+      # you likely don't have yet — see WHATS_LEFT.md). Switch to
+      # "production" only once those are in place.
       - key: ENVIRONMENT
-        value: production
+        value: staging
+      # Required for the cross-site refresh-token cookie (frontend on
+      # Vercel, backend on Render = two different domains) to actually be
+      # sent back on fetch/XHR requests. Must stay true on Render (HTTPS).
+      - key: COOKIE_SECURE
+        value: true

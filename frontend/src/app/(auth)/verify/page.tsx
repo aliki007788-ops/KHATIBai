@@ -79,23 +79,23 @@ export default function VerifyPage() {
         <div style={{
           width: '100%',
           maxWidth: '450px',
-          backgroundColor: 'rgba(255, 255, 255, 0.4)',
+          backgroundColor: 'var(--card-bg)',
           backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(0, 0, 0, 0.1)',
+          border: '1px solid var(--border-color)',
           borderRadius: '20px',
           padding: '40px 30px',
-          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.1)',
+          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.25)',
         }}>
           
           <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>تایید حساب کاربری</h1>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', color: 'var(--foreground)' }}>تایید حساب کاربری</h1>
             <p style={{ fontSize: '14px', color: 'var(--foreground)', opacity: 0.6 }}>
               {step === 1 ? 'برای دریافت کد تایید، شماره یا ایمیل خود را وارد کنید.' : 'کد ۶ رقمی ارسال شده را وارد کنید.'}
             </p>
           </div>
 
           {/* تب‌ها */}
-          <div style={{ display: 'flex', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '10px', padding: '4px', marginBottom: '30px' }}>
+          <div style={{ display: 'flex', backgroundColor: 'var(--card-bg-solid)', borderRadius: '10px', padding: '4px', marginBottom: '30px' }}>
             <button
               onClick={() => { setVerifyMethod('email'); setStep(1); setCode(Array(6).fill('')); }}
               style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', backgroundColor: verifyMethod === 'email' ? 'var(--primary)' : 'transparent', color: verifyMethod === 'email' ? 'white' : 'var(--foreground)', transition: 'all 0.3s' }}
@@ -114,7 +114,7 @@ export default function VerifyPage() {
             /* ================= مرحله ۱: دریافت شماره/ایمیل ================= */
             <div>
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--foreground)' }}>
                   {verifyMethod === 'phone' ? 'شماره موبایل' : 'آدرس ایمیل'}
                 </label>
                 
@@ -125,9 +125,9 @@ export default function VerifyPage() {
                       placeholder="912 345 6789" 
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.1)', backgroundColor: 'white', color: 'black', fontSize: '16px', textAlign: 'center' }}
+                      style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '16px', textAlign: 'center' }}
                     />
-                    <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: 'rgba(0,0,0,0.05)', color: 'var(--foreground)', border: '1px solid rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+                    <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: 'var(--card-bg-solid)', color: 'var(--foreground)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
                       +98
                     </div>
                   </div>
@@ -135,7 +135,7 @@ export default function VerifyPage() {
                   <input 
                     type="email" 
                     placeholder="example@email.com" 
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.1)', backgroundColor: 'white', color: 'black', fontSize: '16px', textAlign: 'center' }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '16px', textAlign: 'center' }}
                   />
                 )}
               </div>
@@ -164,9 +164,9 @@ export default function VerifyPage() {
                       width: '50px',
                       height: '60px',
                       borderRadius: '12px',
-                      border: '2px solid rgba(0,0,0,0.1)',
-                      backgroundColor: 'white',
-                      color: 'black',
+                      border: '2px solid var(--border-color)',
+                      backgroundColor: 'var(--input-bg)',
+                      color: 'var(--input-text)',
                       fontSize: '26px',
                       fontWeight: 'bold',
                       textAlign: 'center',
@@ -176,7 +176,7 @@ export default function VerifyPage() {
                       padding: 0,
                     }}
                     onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.2)'; }}
-                    onBlur={(e) => { e.target.style.borderColor = 'rgba(0,0,0,0.1)'; e.target.style.boxShadow = 'none'; }}
+                    onBlur={(e) => { e.target.style.borderColor = 'var(--border-color)'; e.target.style.boxShadow = 'none'; }}
                   />
                 ))}
               </div>
