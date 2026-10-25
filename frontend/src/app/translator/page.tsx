@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { useAuthStore } from '@/stores/authStore';
+import { Paperclip } from 'lucide-react';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
@@ -14,10 +15,12 @@ export default function LiveTranslatorPage() {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
   const modeRef = useRef<'fa-to-ar' | 'ar-to-fa'>('fa-to-ar');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     isListeningRef.current = isListening;
@@ -44,9 +47,7 @@ export default function LiveTranslatorPage() {
             }
           }
 
-          if (interimTranscript) {
-            setSourceText(interimTranscript);
-          }
+          if (interimTranscript) setSourceText(interimTranscript);
 
           if (finalTranscript) {
             setSourceText(finalTranscript);
@@ -55,9 +56,8 @@ export default function LiveTranslatorPage() {
         };
 
         recognition.onerror = (event: any) => {
-          console.error("Speech recognition error", event.error);
           if (event.error === 'not-allowed') {
-            alert('دسترسی به میکروفون مسدود شده است. لطفاً از تنظیمات مرورگر اجازه دهید.');
+            alert('دسترسی به میکروفون مسدود شده است.');
             setIsListening(false);
           }
         };
@@ -69,8 +69,6 @@ export default function LiveTranslatorPage() {
         };
 
         recognitionRef.current = recognition;
-      } else {
-        alert("مرورگر شما از تشخیص گفتار پشتیبانی نمی‌کند. لطفاً از Google Chrome استفاده کنید.");
       }
     }
   }, []);
@@ -78,7 +76,6 @@ export default function LiveTranslatorPage() {
   const speakText = (text: string, lang: string) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang; 
       utterance.rate = 0.95; 
@@ -94,23 +91,19 @@ export default function LiveTranslatorPage() {
           try { recognitionRef.current?.start(); } catch(e) {}
         }
       };
-
       window.speechSynthesis.speak(utterance);
     }
   };
 
   const handleTranslation = async (text: string, currentMode: 'fa-to-ar' | 'ar-to-fa') => {
+    if (!text.trim()) return;
     setIsTranslating(true);
     setErrorMessage('');
     recognitionRef.current?.stop();
 
     try {
-      // استخراج توکن از authStore (Zustand)
       const accessToken = useAuthStore.getState().accessToken;
-
-      if (!accessToken) {
-        throw new Error('لطفاً ابتدا وارد حساب کاربری شوید.');
-      }
+      if (!accessToken) throw new Error('لطفاً ابتدا وارد حساب کاربری شوید.');
 
       const direction = currentMode === 'fa-to-ar' ? 'fa_to_iq' : 'iq_to_fa';
 
@@ -124,23 +117,14 @@ export default function LiveTranslatorPage() {
       });
 
       if (!response.ok) {
-        // اگه 401 بود، یعنی توکن منقضی شده — کاربر باید لاگین کنه
-        if (response.status === 401) {
-          throw new Error('نشست شما منقضی شده است. لطفاً دوباره وارد شوید.');
-        }
-        // اگه 502 بود، یعنی سرویس AI خطا داده
-        if (response.status === 502) {
-          throw new Error('سرویس ترجمه در حال حاضر در دسترس نیست. لطفاً دوباره تلاش کنید.');
-        }
+        if (response.status === 401) throw new Error('نشست شما منقضی شده است. لطفاً دوباره وارد شوید.');
+        if (response.status === 502) throw new Error('سرویس ترجمه در حال حاضر در دسترس نیست.');
         throw new Error(`خطای سرور: ${response.status}`);
       }
 
       const data = await response.json();
       const translated = data.translated_text || '';
-      
-      if (!translated) {
-        throw new Error('ترجمه‌ای دریافت نشد.');
-      }
+      if (!translated) throw new Error('ترجمه‌ای دریافت نشد.');
       
       setTranslatedText(translated);
       setIsTranslating(false);
@@ -148,14 +132,58 @@ export default function LiveTranslatorPage() {
       const targetLang = currentMode === 'fa-to-ar' ? 'ar-IQ' : 'fa-IR';
       speakText(translated, targetLang);
     } catch (error: any) {
-      console.error('Translation error:', error);
       setIsTranslating(false);
-      setErrorMessage(error.message || 'خطا در ترجمه. لطفاً دوباره تلاش کنید.');
-      setTranslatedText('');
-      // دوباره ضبط رو شروع کن اگه در حال گوش دادن بود
+      setErrorMessage(error.message || 'خطا در ترجمه.');
       if (isListeningRef.current) {
         try { recognitionRef.current?.start(); } catch(e) {}
       }
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('audio/')) {
+      setErrorMessage('لطفاً یک فایل صوتی (mp3, wav, webm) انتخاب کنید.');
+      return;
+    }
+
+    setIsUploading(true);
+    setErrorMessage('');
+    setTranslatedText('');
+    setSourceText('در حال پردازش فایل صوتی...');
+
+    try {
+      const accessToken = useAuthStore.getState().accessToken;
+      if (!accessToken) throw new Error('لطفاً ابتدا وارد حساب کاربری شوید.');
+
+      const formData = new FormData();
+      formData.append('topic_label', 'ترجمه زنده');
+      formData.append('file', file);
+      
+      const speechResponse = await fetch(`${BASE_URL}/api/speech/audio`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+        body: formData,
+      });
+
+      if (!speechResponse.ok) throw new Error('خطا در پردازش فایل صوتی.');
+
+      const speechData = await speechResponse.json();
+      const recognizedText = speechData.transcript || speechData.text || speechData.input_text;
+      
+      if (!recognizedText) throw new Error('متنی از فایل صوتی تشخیص داده نشد.');
+
+      setSourceText(recognizedText);
+      await handleTranslation(recognizedText, modeRef.current);
+      
+    } catch (error: any) {
+      setErrorMessage(error.message || 'خطا در پردازش فایل صوتی.');
+      setSourceText('');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -219,7 +247,7 @@ export default function LiveTranslatorPage() {
           </button>
         </div>
 
-        {/* دکمه میکروفون */}
+        {/* دکمه میکروفون بزرگ (وسط) */}
         <div className="relative mt-4 mb-2 flex flex-col items-center">
           <div className="relative">
             {isListening && !isSpeaking && (
@@ -241,7 +269,7 @@ export default function LiveTranslatorPage() {
                     ? 'bg-red-500 shadow-[0_0_50px_rgba(239,68,68,0.6)] scale-110' 
                     : 'bg-gradient-to-br from-[#8b5cf6] to-[#3b82f6] hover:scale-105 shadow-[0_0_30px_rgba(139,92,246,0.4)]'
               }`}
-              disabled={isSpeaking}
+              disabled={isSpeaking || isUploading}
             >
               {isSpeaking ? (
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="white" className="w-14 h-14 animate-pulse">
@@ -266,8 +294,34 @@ export default function LiveTranslatorPage() {
           </p>
         </div>
 
+        {/* دکمه آپلود فایل (گیره سبز، پایین‌تر از میکروفون) */}
+        <div className="flex flex-col items-center gap-2">
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isListening || isSpeaking || isUploading}
+            className="flex items-center gap-2 px-4 py-2 rounded-full border border-green-500/40 text-green-500 hover:bg-green-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          >
+            {isUploading ? (
+              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <Paperclip className="w-4 h-4" />
+            )}
+            <span>{isUploading ? 'در حال پردازش...' : 'بارگذاری فایل صوتی'}</span>
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept="audio/*"
+            className="hidden"
+          />
+        </div>
+
         {/* نمایش متن‌ها */}
-        <div className="w-full grid grid-cols-1 gap-4 mt-4">
+        <div className="w-full grid grid-cols-1 gap-4 mt-6">
           <div className="glass-panel p-6 rounded-2xl border-r-4 border-r-[var(--primary)] transition-all">
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-bold text-[var(--primary)]">
