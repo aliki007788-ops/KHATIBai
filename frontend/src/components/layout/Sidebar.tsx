@@ -19,6 +19,7 @@ export function Sidebar({ role = 'user' }: SidebarProps) {
     { name: 'آموزش عراقی', icon: '🗣️', href: '/learn' },
     { name: 'تاریخچه', icon: '🕒', href: '/history' },
     { name: 'پیشرفت من', icon: '📈', href: '/progress' },
+    { name: 'تیم من', icon: '🧑‍🤝‍🧑', href: '/team' },
     { name: 'تنظیمات', icon: '⚙️', href: '/settings' },
   ];
 

@@ -174,6 +174,10 @@ export const UI_TEXT = {
   approveDraft: { fa: "تایید و استفاده", ar: "موافقة واستخدام", en: "Approve & Use" },
   regenerateDraft: { fa: "نسخه دیگر", ar: "نسخة أخرى", en: "Try Another" },
   discardDraft: { fa: "رد کردن", ar: "رفض", en: "Discard" },
+
+  // برجسته‌سازی کلمات حشو/تکراری روی متن پیاده‌شده
+  fillerWordsCount: { fa: "کلمات حشو", ar: "كلمات الحشو", en: "Filler words" },
+  repeatedWordsCount: { fa: "تکرار کلمه", ar: "تكرار الكلمات", en: "Repeated words" },
 } as const;
 
 export type UITextKey = keyof typeof UI_TEXT;

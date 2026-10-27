@@ -27,6 +27,7 @@ import {
   CONTENT_DIMENSION_ORDER,
   DELIVERY_DIMENSION_ORDER,
 } from "@/features/practice/constants";
+import { analyzeTranscript } from "@/features/practice/textAnalysis";
 
 // ---------- یک کارت تحلیل کلیک‌پذیر ----------
 interface CardModel {
@@ -508,11 +509,45 @@ export default function PracticeDetailPage({
                       {showTranscript ? "▲" : "▼"}
                     </span>
                   </button>
-                  {showTranscript && (
-                    <p className="mt-4 text-sm leading-loose text-[var(--foreground)]/70 whitespace-pre-wrap">
-                      {data.transcript || data.input_text}
-                    </p>
-                  )}
+                  {showTranscript && (() => {
+                    const analysis = analyzeTranscript(data.transcript || data.input_text || "");
+                    return (
+                      <div className="mt-4 flex flex-col gap-4">
+                        <p className="text-sm leading-loose text-[var(--foreground)]/70 whitespace-pre-wrap">
+                          {analysis.segments.map((seg, i) => {
+                            if (seg.type === "filler") {
+                              return (
+                                <span key={i} className="bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded px-0.5">
+                                  {seg.text}
+                                </span>
+                              );
+                            }
+                            if (seg.type === "repeat") {
+                              return (
+                                <span key={i} className="bg-red-500/20 text-red-500 rounded px-0.5">
+                                  {seg.text}
+                                </span>
+                              );
+                            }
+                            return <span key={i}>{seg.text}</span>;
+                          })}
+                        </p>
+
+                        {(analysis.fillerTotal > 0 || analysis.repeatedWordTotal > 0) && (
+                          <div className="flex flex-wrap gap-4 text-xs text-[var(--foreground)]/60 border-t border-white/10 pt-3">
+                            <span className="flex items-center gap-1">
+                              <span className="w-2.5 h-2.5 rounded-sm bg-yellow-500/50 inline-block" />
+                              {t("fillerWordsCount", language)}: {toPersianNumber(analysis.fillerTotal)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="w-2.5 h-2.5 rounded-sm bg-red-500/50 inline-block" />
+                              {t("repeatedWordsCount", language)}: {toPersianNumber(analysis.repeatedWordTotal)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

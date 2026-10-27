@@ -534,6 +534,52 @@ class ProcessingJob(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class OrgRoleEnum(str, enum.Enum):
+    owner = "owner"
+    manager = "manager"
+    member = "member"
+
+
+class Organization(Base):
+    """تیم/سازمان — برای حالت B2B (مربی/مدیر که پیشرفت چند کاربر را دنبال می‌کند)."""
+
+    __tablename__ = "organizations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    owner_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    invite_code: Mapped[str] = mapped_column(String(16), unique=True, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+
+    members: Mapped[list["OrganizationMember"]] = relationship(
+        back_populates="organization", cascade="all, delete-orphan"
+    )
+
+
+class OrganizationMember(Base):
+    __tablename__ = "organization_members"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "user_id", name="uq_org_member_user"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    role: Mapped[OrgRoleEnum] = mapped_column(
+        Enum(OrgRoleEnum), default=OrgRoleEnum.member, nullable=False
+    )
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+
+    organization: Mapped["Organization"] = relationship(back_populates="members")
+    user: Mapped["User"] = relationship()
+
+
 class Topic(Base):
     __tablename__ = "topics"
 

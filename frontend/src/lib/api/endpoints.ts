@@ -33,6 +33,14 @@ export const endpoints = {
   practice: {
     suggest: "/api/practice/suggest",
   },
+  team: {
+    me: "/api/team/me",
+    create: "/api/team/create",
+    join: "/api/team/join",
+    leave: "/api/team/leave",
+    members: "/api/team/members",
+    exportCsv: "/api/team/export.csv",
+  },
   billing: {
     subscription: "/api/billing/subscription",
     history: "/api/billing/history",
