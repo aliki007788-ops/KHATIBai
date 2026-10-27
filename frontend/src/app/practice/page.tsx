@@ -90,6 +90,8 @@ export default function PracticePage() {
   const [impromptuTopic, setImpromptuTopic] = useState<string>("");
   const [guidanceText, setGuidanceText] = useState<string>("");
   const [selectedBankId, setSelectedBankId] = useState<string>(SCRIPT_BANK[0].id);
+  const [aiHint, setAiHint] = useState<string>("");
+  const [aiDraft, setAiDraft] = useState<{ title: string; prompt_text: string; guidance: string } | null>(null);
 
   const [liveFeed, setLiveFeed] = useState<LiveFeedEntry[]>([]);
   const [coachBuffer, setCoachBuffer] = useState<string>("");
@@ -141,23 +143,36 @@ export default function PracticePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, level]);
 
-  const handleSuggestTopic = () => {
+  // گفتگوی پیشنهاد-و-تأیید: پیشنهاد هوش مصنوعی فقط در یک پیش‌نمایش نشان داده
+  // می‌شود و تا وقتی کاربر «تایید و استفاده» را نزند، جایگزین متن تمرین نمی‌شود.
+  const requestAiDraft = (regenerate = false) => {
     if (mode === "free") return;
     suggestMutation.mutate(
-      { mode, level },
       {
-        onSuccess: (data) => {
-          setSelectedBankId("ai-" + Date.now());
-          setGuidanceText(data.guidance);
-          if (mode === "script") {
-            setPracticeText(data.prompt_text);
-          } else {
-            setImpromptuTopic(`${data.title}\n${data.prompt_text}`);
-          }
-        },
+        mode,
+        level,
+        hint: aiHint.trim() || undefined,
+        previousTitle: regenerate ? aiDraft?.title : undefined,
+      },
+      {
+        onSuccess: (data) => setAiDraft(data),
       }
     );
   };
+
+  const approveAiDraft = () => {
+    if (!aiDraft) return;
+    setSelectedBankId("ai-" + Date.now());
+    setGuidanceText(aiDraft.guidance);
+    if (mode === "script") {
+      setPracticeText(aiDraft.prompt_text);
+    } else {
+      setImpromptuTopic(`${aiDraft.title}\n${aiDraft.prompt_text}`);
+    }
+    setAiDraft(null);
+  };
+
+  const discardAiDraft = () => setAiDraft(null);
 
   // ---------- Recording timer / waveform ----------
   useEffect(() => {
@@ -421,10 +436,21 @@ export default function PracticePage() {
                     </div>
                   </div>
 
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={aiHint}
+                    onChange={(e) => setAiHint(e.target.value)}
+                    disabled={isRecording}
+                    placeholder={t("aiHintPlaceholder", language)}
+                    className="flex-1 glass-panel px-4 py-2 rounded-xl text-sm bg-transparent border border-white/10 focus:border-[var(--accent)] outline-none"
+                  />
                   <Button
                     size="sm"
                     variant="glass"
-                    onClick={handleSuggestTopic}
+                    onClick={() => requestAiDraft(false)}
                     loading={suggestMutation.isPending}
                     disabled={isRecording}
                   >
@@ -432,6 +458,42 @@ export default function PracticePage() {
                     {suggestMutation.isPending ? t("suggestingTopic", language) : t("suggestNewTopic", language)}
                   </Button>
                 </div>
+
+                {suggestMutation.isError && (
+                  <p className="text-xs text-red-400">{t("suggestError", language)}</p>
+                )}
+
+                {aiDraft && (
+                  <div className="glass-panel p-4 rounded-2xl border border-[var(--accent)]/40 bg-[var(--accent)]/5 flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-[var(--accent)]">
+                      <Sparkles className="w-4 h-4" />
+                      {t("draftTitle", language)}
+                    </div>
+                    <p className="font-medium">{aiDraft.title}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-line">{aiDraft.prompt_text}</p>
+                    <p className="text-xs text-gray-500">
+                      <span className="font-medium">{t("guidanceLabel", language)}: </span>
+                      {aiDraft.guidance}
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button size="sm" variant="primary" onClick={approveAiDraft}>
+                        {t("approveDraft", language)}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="glass"
+                        onClick={() => requestAiDraft(true)}
+                        loading={suggestMutation.isPending}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        {t("regenerateDraft", language)}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={discardAiDraft}>
+                        {t("discardDraft", language)}
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {activeBank.length > 0 && (
                   <div className="flex items-center gap-2 overflow-x-auto pb-1">

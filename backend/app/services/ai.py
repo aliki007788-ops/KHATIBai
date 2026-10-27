@@ -216,8 +216,10 @@ def suggest_practice_topic(
     user_id: str | None,
     mode: str,
     level: str,
+    hint: str | None = None,
+    previous_title: str | None = None,
 ) -> PracticeSuggestionResponse:
-    system, user = build_practice_suggestion_prompt(mode, level)
+    system, user = build_practice_suggestion_prompt(mode, level, hint, previous_title)
     prompt_version = PROMPT_VERSIONS["practice_suggestion"]
 
     try:

@@ -97,7 +97,12 @@ def build_chat_iraqi_coach_prompt(user_message: str, history_summary: str = "") 
     return system, user
 
 
-def build_practice_suggestion_prompt(mode: str, level: str) -> tuple[str, str]:
+def build_practice_suggestion_prompt(
+    mode: str,
+    level: str,
+    hint: str | None = None,
+    previous_title: str | None = None,
+) -> tuple[str, str]:
     mode_fa = _MODE_LABELS_FA.get(mode, mode)
     level_fa = _LEVEL_LABELS_FA.get(level, level)
 
@@ -115,13 +120,25 @@ def build_practice_suggestion_prompt(mode: str, level: str) -> tuple[str, str]:
         "صحبت بداهه باشد (۱ تا ۲ جمله). "
         "اگر حالت «ارائه حرفه‌ای» است، prompt_text باید یک سناریوی ارائه واقعی "
         "باشد (مثلاً ارائه به سرمایه‌گذار، مدیر، یا مشتری).\n\n"
+        "اگر کاربر یک درخواست یا موضوع دلخواه مشخص کرده باشد، پیشنهاد شما باید "
+        "دقیقاً حول همان درخواست باشد — نه یک موضوع کاملاً نامرتبط؛ فقط آن را به "
+        "شکل حرفه‌ای و متناسب با سطح و حالت تمرین بازنویسی/گسترش دهید. اگر درخواستی "
+        "داده نشده، خودتان یک موضوع مدرن و متنوع انتخاب کنید.\n\n"
         "guidance باید یک راهنمای کوتاه ساختاری (مقدمه/بدنه/نتیجه یا نکات "
         "کلیدی) برای کمک به کاربر در تمرین این مورد خاص باشد.\n\n"
         "فقط یک JSON معتبر و بدون متن اضافه، دقیقاً با این ساختار برگردانید:\n"
         '{\n  "title": "عنوان کوتاه",\n  "prompt_text": "متن یا موضوع تمرین",\n'
         '  "guidance": "راهنمای کوتاه ساختاری"\n}'
     )
-    user = f"یک {('متن' if mode == 'script' else 'موضوع')} جدید و متفاوت از قبلی‌ها برای سطح {level_fa} پیشنهاد بده."
+
+    user_parts = [f"یک {('متن' if mode == 'script' else 'موضوع')} برای سطح {level_fa} پیشنهاد بده."]
+    if hint:
+        user_parts.append(f"درخواست یا موضوع دلخواه کاربر: «{hint}». پیشنهاد را دقیقاً حول همین محور بساز.")
+    if previous_title:
+        user_parts.append(
+            f"پیشنهاد قبلی («{previous_title}») مورد پسند کاربر نبود؛ یک نسخه‌ی متفاوت و تازه (نه تکراری) بساز."
+        )
+    user = " ".join(user_parts)
     return system, user
 
 

@@ -166,6 +166,14 @@ export const UI_TEXT = {
   youSaid: { fa: "شما گفتید", ar: "قلت", en: "You said" },
   coachSays: { fa: "مربی خطیب", ar: "مدرب خطيب", en: "Khatib Coach" },
   liveCoachOffline: { fa: "اتصال مربی زنده برقرار نشد.", ar: "تعذر الاتصال بالمدرب المباشر.", en: "Could not connect to the live coach." },
+
+  // گفتگوی پیشنهاد-و-تأیید موضوع با هوش مصنوعی
+  aiHintLabel: { fa: "موضوع دلخواه خودت رو بگو (اختیاری)", ar: "اذكر الموضوع الذي تريده (اختياري)", en: "Tell the AI what you want (optional)" },
+  aiHintPlaceholder: { fa: "مثلاً: درباره مدیریت زمان یا مذاکره فروش...", ar: "مثلاً: عن إدارة الوقت...", en: "e.g. about time management or sales negotiation..." },
+  draftTitle: { fa: "پیشنهاد هوش مصنوعی — هنوز اعمال نشده", ar: "اقتراح الذكاء الاصطناعي", en: "AI Draft — not applied yet" },
+  approveDraft: { fa: "تایید و استفاده", ar: "موافقة واستخدام", en: "Approve & Use" },
+  regenerateDraft: { fa: "نسخه دیگر", ar: "نسخة أخرى", en: "Try Another" },
+  discardDraft: { fa: "رد کردن", ar: "رفض", en: "Discard" },
 } as const;
 
 export type UITextKey = keyof typeof UI_TEXT;

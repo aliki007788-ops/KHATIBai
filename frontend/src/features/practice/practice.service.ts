@@ -9,10 +9,17 @@ export interface PracticeSuggestion {
 }
 
 export const practiceService = {
-  suggest: async (mode: string, level: PracticeLevel) => {
+  suggest: async (
+    mode: string,
+    level: PracticeLevel,
+    hint?: string,
+    previousTitle?: string
+  ) => {
     const res = await apiClient.post<PracticeSuggestion>(endpoints.practice.suggest, {
       mode,
       level,
+      hint: hint || undefined,
+      previous_title: previousTitle || undefined,
     });
     return res.data;
   },
