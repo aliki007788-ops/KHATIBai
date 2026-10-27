@@ -30,6 +30,9 @@ export const endpoints = {
     list: "/api/speech",
     detail: (id: string) => `/api/speech/${id}`,
   },
+  practice: {
+    suggest: "/api/practice/suggest",
+  },
   billing: {
     subscription: "/api/billing/subscription",
     history: "/api/billing/history",

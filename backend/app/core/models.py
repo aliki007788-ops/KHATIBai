@@ -503,6 +503,8 @@ class SpeechAnalysis(Base):
     )
     overall_score: Mapped[int] = mapped_column(Integer, nullable=False)
     dimension_scores: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    # هر بعد: {"confidence": "توضیح کوتاه فارسی درباره امتیاز این بعد", ...}
+    dimension_details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     ai_strengths: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     ai_weaknesses: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     ai_improvements: Mapped[list] = mapped_column(JSON, default=list, nullable=False)

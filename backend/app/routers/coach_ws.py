@@ -30,9 +30,24 @@ async def coach_websocket(websocket: WebSocket):
             await openai_ws.send(json.dumps({
                 "type": "session.update",
                 "session": {
+                    "modalities": ["text"],
+                    "instructions": (
+                        "شما «خطیب» هستید، یک مربی حرفه‌ای و باتجربه سخنرانی که به فارسی صحبت "
+                        "می‌کند. در حین صحبت کردن کاربر، بعد از هر جمله یا مکث طبیعی، یک بازخورد "
+                        "بسیار کوتاه (حداکثر ۱۵ کلمه)، فوری و کاربردی مثل یک استاد واقعی کنار "
+                        "گوش او بدهید — مثلاً درباره سرعت، تکرار کلمات، مکث‌های زیاد، لحن یا "
+                        "اعتماد به نفس. هرگز کل سخنرانی را خلاصه نکنید، هرگز بیش از یک جمله کوتاه "
+                        "ننویسید، و هرگز به زبانی غیر از فارسی پاسخ ندهید. اگر چیزی برای گفتن "
+                        "نیست، پاسخ خالی برگردانید."
+                    ),
+                    "input_audio_format": "pcm16",
                     "input_audio_transcription": {"model": "whisper-1"},
-                    "turn_detection": {"type": "server_vad"},
-                    "voice": "alloy"
+                    "turn_detection": {
+                        "type": "server_vad",
+                        "threshold": 0.5,
+                        "prefix_padding_ms": 300,
+                        "silence_duration_ms": 700,
+                    },
                 }
             }))
 

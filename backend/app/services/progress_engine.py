@@ -14,12 +14,19 @@ from app.core.models import Speech, SpeechAnalysis, SpeechStatus
 DIMENSION_LABELS_FA = {
     "content": "محتوا",
     "structure": "ساختار",
+    "coherence": "انسجام منطقی",
+    "clarity": "وضوح",
+    "vocabulary": "دایره لغات",
+    "grammar": "گرامر",
+    "persuasion": "اقناع",
+    "emotion": "بار احساسی",
+    "engagement": "تعامل با مخاطب",
+    "depth": "عمق موضوع",
+    "conclusion": "نتیجه‌گیری",
+    "confidence": "اعتماد به نفس",
+    # کلیدهای قدیمی/جانبی که ممکن است در رکوردهای قدیمی‌تر وجود داشته باشند
     "fluency": "روانی بیان",
     "pace": "سرعت بیان",
-    "energy": "انرژی",
-    "pitch": "پایداری صدا",
-    "pause_quality": "کیفیت مکث‌ها",
-    "fillers": "کلمات پرکننده",
 }
 
 

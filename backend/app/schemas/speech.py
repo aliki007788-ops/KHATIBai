@@ -19,11 +19,13 @@ class SpeechResponse(BaseModel):
     duration_sec: float | None
     overall_score: int | None = None
     dimension_scores: dict | None = None
+    dimension_details: dict | None = None
     strengths: list[str] | None = None
     weaknesses: list[str] | None = None
     improvements: list[str] | None = None
     structure_notes: str | None = None
     next_practice: str | None = None
+    audio_metrics: dict | None = None
     created_at: datetime
     completed_at: datetime | None
 

@@ -24,11 +24,13 @@ def _to_response(speech) -> SpeechResponse:
         duration_sec=speech.duration_sec,
         overall_score=analysis.overall_score if analysis else None,
         dimension_scores=analysis.dimension_scores if analysis else None,
+        dimension_details=analysis.dimension_details if analysis else None,
         strengths=analysis.ai_strengths if analysis else None,
         weaknesses=analysis.ai_weaknesses if analysis else None,
         improvements=analysis.ai_improvements if analysis else None,
         structure_notes=analysis.structure_notes if analysis else None,
         next_practice=analysis.next_practice if analysis else None,
+        audio_metrics=analysis.audio_metrics if analysis else None,
         created_at=speech.created_at,
         completed_at=speech.completed_at,
     )

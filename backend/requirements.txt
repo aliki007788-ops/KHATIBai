@@ -29,6 +29,7 @@ iniconfig==2.3.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
 jmespath==1.1.0
+librosa==0.10.2.post1
 Mako==1.4.1
 MarkupSafe==3.0.3
 mutagen==1.47.0
@@ -57,6 +58,7 @@ redis==5.2.1
 rsa==4.9.1
 s3transfer==0.10.4
 six==1.17.0
+soundfile==0.12.1
 SQLAlchemy==2.0.36
 starlette==1.6.0
 swagger_ui_bundle==1.1.0

@@ -29,6 +29,7 @@ from app.routers import chat as chat_router
 from app.routers import eitaa as eitaa_router
 from app.routers import health as health_router
 from app.routers import learning as learning_router
+from app.routers import practice as practice_router
 from app.routers import privacy as privacy_router
 from app.routers import progress as progress_router
 from app.routers import speech as speech_router
@@ -139,6 +140,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router.router)
     app.include_router(progress_router.router)
     app.include_router(learning_router.router)
+    app.include_router(practice_router.router)
     app.include_router(admin_router.router)
     app.include_router(privacy_router.router)
     app.include_router(eitaa_router.router)

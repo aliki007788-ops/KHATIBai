@@ -21,6 +21,7 @@ from app.core.models import (
     User,
 )
 from app.services import ai as ai_service
+from app.services.audio_analysis import compute_audio_metrics
 from app.services.storage import get_storage_backend, StorageError
 from app.services.usage import try_consume_speech
 
@@ -37,6 +38,17 @@ ALLOWED_AUDIO_TYPES = {
     "audio/m4a",
     "audio/x-m4a",
 }
+
+
+def _split_dimensions(analysis_result) -> tuple[dict, dict]:
+    """از dimensions ساختاریافته (گزینه A)، دو دیکشنری جدا می‌سازد:
+    dimension_scores (key -> امتیاز عددی) و dimension_details (key -> توضیح)."""
+    scores: dict[str, int] = {}
+    details: dict[str, str] = {}
+    for key, dim in analysis_result.dimensions.items():
+        scores[key] = dim.score
+        details[key] = dim.explanation
+    return scores, details
 
 
 class SpeechServiceError(Exception):
@@ -73,15 +85,13 @@ def create_text_speech(
         analysis_result = ai_service.analyze_speech(
             db, user.id, topic_label, text
         )
+        dimension_scores, dimension_details = _split_dimensions(analysis_result)
 
         analysis = SpeechAnalysis(
             speech_id=speech.id,
             overall_score=analysis_result.score,
-            dimension_scores={
-                "content": analysis_result.score,
-                "structure": max(0, analysis_result.score - 5),
-                "fluency": max(0, analysis_result.score - 3),
-            },
+            dimension_scores=dimension_scores,
+            dimension_details=dimension_details,
             ai_strengths=analysis_result.strengths,
             ai_weaknesses=analysis_result.weaknesses,
             ai_improvements=analysis_result.improvements,
@@ -208,24 +218,25 @@ def _process_audio_speech(db: Session, speech: Speech, asset: AudioAsset) -> Non
         db.commit()
         return
 
+    # گزینه B: تحلیل صوتی مستقل با librosa — باید قبل از GPT اجرا شود.
+    audio_metrics = compute_audio_metrics(local_path, transcript)
+
     try:
         analysis_result = ai_service.analyze_speech(
             db, speech.user_id, speech.topic_label or "سخنرانی", transcript
         )
+        dimension_scores, dimension_details = _split_dimensions(analysis_result)
         analysis = SpeechAnalysis(
             speech_id=speech.id,
             overall_score=analysis_result.score,
-            dimension_scores={
-                "content": analysis_result.score,
-                "structure": max(0, analysis_result.score - 5),
-                "fluency": max(0, analysis_result.score - 3),
-                "pace": max(0, analysis_result.score - 4),
-            },
+            dimension_scores=dimension_scores,
+            dimension_details=dimension_details,
             ai_strengths=analysis_result.strengths,
             ai_weaknesses=analysis_result.weaknesses,
             ai_improvements=analysis_result.improvements,
             structure_notes=analysis_result.structure_notes,
             next_practice=analysis_result.next_practice,
+            audio_metrics=audio_metrics,
         )
         db.add(analysis)
         speech.status = SpeechStatus.completed

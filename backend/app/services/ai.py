@@ -16,12 +16,18 @@ from sqlalchemy.orm import Session
 from app.core.ai_pricing import estimate_cost_usd
 from app.core.config import settings
 from app.core.models import AIProviderUsed, AIRequestLog, AIRequestStatus, AITaskType
-from app.schemas.ai import ChatReplyResponse, SpeechAnalysisResponse, TranslationResponse
+from app.schemas.ai import (
+    ChatReplyResponse,
+    PracticeSuggestionResponse,
+    SpeechAnalysisResponse,
+    TranslationResponse,
+)
 from app.services import ai_client
 from app.services.ai_client import AIProviderError, ChatCompletionResult, ProviderConfig
 from app.services.ai_prompts import (
     PROMPT_VERSIONS,
     build_chat_iraqi_coach_prompt,
+    build_practice_suggestion_prompt,
     build_speech_analysis_prompt,
     build_translation_prompt,
 )
@@ -189,6 +195,36 @@ def chat_iraqi_coach(
     try:
         result, provider_used, model, retries = _call_with_fallback(system, user)
         parsed = _parse_structured(result.content, ChatReplyResponse)
+        _log_request(
+            db, user_id, AITaskType.chat_reply, prompt_version,
+            provider_used, model, AIRequestStatus.success,
+            result.latency_ms, retries,
+            result.input_tokens, result.output_tokens,
+        )
+        return parsed
+    except AIServiceError as exc:
+        _log_request(
+            db, user_id, AITaskType.chat_reply, prompt_version,
+            AIProviderUsed.primary, settings.ai_model, AIRequestStatus.failed,
+            0, 0, error_message=str(exc),
+        )
+        raise
+
+
+def suggest_practice_topic(
+    db: Session,
+    user_id: str | None,
+    mode: str,
+    level: str,
+) -> PracticeSuggestionResponse:
+    system, user = build_practice_suggestion_prompt(mode, level)
+    prompt_version = PROMPT_VERSIONS["practice_suggestion"]
+
+    try:
+        result, provider_used, model, retries = _call_with_fallback(system, user)
+        parsed = _parse_structured(result.content, PracticeSuggestionResponse)
+        # از نوع chat_reply برای لاگ استفاده می‌شود تا نیازی به migration جدید
+        # روی enum دیتابیس AITaskType نباشد.
         _log_request(
             db, user_id, AITaskType.chat_reply, prompt_version,
             provider_used, model, AIRequestStatus.success,
