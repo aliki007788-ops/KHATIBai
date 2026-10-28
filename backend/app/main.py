@@ -37,7 +37,7 @@ from app.routers import speech as speech_router
 from app.routers import team as team_router
 from app.routers import translate as translate_router
 from app.routers import coach_ws as coach_ws_router
-from app.routers import admin_finance as admin_finance_router  # ✅ اضافه شد
+from app.routers import admin_finance as admin_finance_router
 
 logger = logging.getLogger("khatib")
 
@@ -92,6 +92,7 @@ def create_app() -> FastAPI:
     else:
         logger.error("Swagger UI static dir not found: %s", STATIC_DIR)
 
+    # 👇 ۱. میان‌افزارهای داخلی (اولین لایه‌هایی که اجرا می‌شوند)
     app.add_middleware(RequestIDMiddleware)
     # app.add_middleware(SecurityHeadersMiddleware)
 
@@ -99,15 +100,6 @@ def create_app() -> FastAPI:
         app.add_middleware(
             TrustedHostMiddleware,
             allowed_hosts=settings.allowed_hosts_list,
-        )
-
-    if settings.cors_origins_list:
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=settings.cors_origins_list,
-            allow_credentials=True,
-            allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-            allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
         )
 
     @app.middleware("http")
@@ -126,6 +118,17 @@ def create_app() -> FastAPI:
             path=path,
         ).observe(duration)
         return response
+
+    # 👇 ۲. CORSMiddleware باید آخرین میان‌افزار باشد (خارجی‌ترین لایه)
+    #    تا هدرهای CORS به تمام پاسخ‌ها (حتی خطاها) اضافه شوند.
+    if settings.cors_origins_list:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_origins_list,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        )
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
@@ -150,7 +153,7 @@ def create_app() -> FastAPI:
     app.include_router(share_router.router)
     app.include_router(translate_router.router)
     app.include_router(coach_ws_router.router)
-    app.include_router(admin_finance_router.router)  # ✅ اضافه شد
+    app.include_router(admin_finance_router.router)
 
     _override_openapi_version(app, "3.0.3")
 
