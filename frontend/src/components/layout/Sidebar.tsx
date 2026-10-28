@@ -29,6 +29,9 @@ export function Sidebar({ role = 'user' }: SidebarProps) {
     { name: 'مدیریت مالی', icon: '💰', href: '/admin/finance' },
     { name: 'مدیریت محتوا', icon: '📝', href: '/admin/content' },
     { name: 'تنظیمات سیستم', icon: '⚙️', href: '/admin/settings' },
+    { name: 'استودیوی سخنرانی', icon: '🎙️', href: '/practice' },
+    { name: 'داشبورد کاربری', icon: '📊', href: '/dashboard' },
+    { name: 'تیم من', icon: '🧑‍🤝‍🧑', href: '/team' },
   ];
 
   const menuItems = role === 'admin' ? adminMenu : userMenu;

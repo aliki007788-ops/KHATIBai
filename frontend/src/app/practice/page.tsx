@@ -112,8 +112,12 @@ export default function PracticePage() {
   const muteGainRef = useRef<GainNode | null>(null);
 
   const createAudio = useCreateAudioSpeech();
-  const { data: speechData, isLoading: isSpeechLoading } = useSpeech(speechId);
   const { data: recentSpeeches } = useSpeechList();
+  // بعد از ضبط، کاربر بلافاصله به /practice/[id] هدایت می‌شود، پس speechId در این
+  // صفحه معمولاً هرگز ست نمی‌شود — برای اینکه سایدبار همیشه خالی نماند، در نبود
+  // یک جلسه فعال، آخرین تمرینِ تکمیل‌شده کاربر را نشان می‌دهیم.
+  const latestCompletedId = recentSpeeches?.find((s) => s.status === "completed")?.id ?? null;
+  const { data: speechData, isLoading: isSpeechLoading } = useSpeech(speechId ?? latestCompletedId);
   const suggestMutation = useSuggestPractice();
 
   // ---------- Content bank wiring ----------
@@ -640,7 +644,12 @@ export default function PracticePage() {
 
           <div className="w-full lg:w-96 flex flex-col gap-6">
             <div className="glass-panel p-6 rounded-[2rem] text-center">
-              <h3 className="text-sm text-gray-500 mb-2">{t("overallScore", language)}</h3>
+              <h3 className="text-sm text-gray-500 mb-2">
+                {t("overallScore", language)}
+                {!speechId && speechData && (
+                  <span className="text-xs text-gray-400 font-normal"> (آخرین تمرین)</span>
+                )}
+              </h3>
               {isSpeechLoading || isProcessing ? (
                 <Skeleton className="h-16 w-32 mx-auto" />
               ) : (
