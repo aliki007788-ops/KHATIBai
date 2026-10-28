@@ -534,6 +534,42 @@ class ProcessingJob(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class SpeechShare(Base):
+    """لینک عمومی و فقط-خواندنیِ یک تحلیل، برای گرفتن بازخورد از مربی/دوستان بدون نیاز به ورود."""
+
+    __tablename__ = "speech_shares"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    speech_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("speeches.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    share_token: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+
+    comments: Mapped[list["SpeechComment"]] = relationship(
+        back_populates="share", cascade="all, delete-orphan"
+    )
+
+
+class SpeechComment(Base):
+    """نظر/بازخورد همتا (peer review) روی یک تحلیل به‌اشتراک‌گذاشته‌شده — بدون نیاز به ورود."""
+
+    __tablename__ = "speech_comments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    share_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("speech_shares.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    author_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+
+    share: Mapped["SpeechShare"] = relationship(back_populates="comments")
+
+
 class OrgRoleEnum(str, enum.Enum):
     owner = "owner"
     manager = "manager"
@@ -568,8 +604,9 @@ class OrganizationMember(Base):
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # هر کاربر حداکثر عضو یک تیم است (سرویس هم همین را فرض می‌کند).
     user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
     )
     role: Mapped[OrgRoleEnum] = mapped_column(
         Enum(OrgRoleEnum), default=OrgRoleEnum.member, nullable=False

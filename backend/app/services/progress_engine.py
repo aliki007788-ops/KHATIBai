@@ -30,6 +30,10 @@ DIMENSION_LABELS_FA = {
 }
 
 
+WEEKLY_CHALLENGE_TARGET = 3
+XP_PER_LEVEL = 200
+
+
 @dataclass
 class ProgressSummary:
     practice_count: int
@@ -39,6 +43,28 @@ class ProgressSummary:
     monthly_average_score: float | None
     current_streak_days: int
     score_trend: list[dict]
+    xp: int
+    level: int
+    xp_to_next_level: int
+    weekly_practice_count: int
+    weekly_challenge_target: int
+    platform_average_score: float | None
+
+
+def _compute_xp(practice_count: int, total_score: int) -> tuple[int, int, int]:
+    """امتیاز XP ساده: هر تمرین ۱۰ امتیاز پایه + نیمی از امتیاز کیفیت آن."""
+    xp = practice_count * 10 + total_score // 2
+    level = 1 + xp // XP_PER_LEVEL
+    xp_to_next_level = XP_PER_LEVEL - (xp % XP_PER_LEVEL)
+    return xp, level, xp_to_next_level
+
+
+def compute_platform_average(db: Session) -> float | None:
+    """میانگین امتیاز کل کاربران پلتفرم (ناشناس، بدون افشای داده فردی) — برای مقایسه."""
+    rows = db.execute(select(SpeechAnalysis.overall_score)).scalars().all()
+    if not rows:
+        return None
+    return round(sum(rows) / len(rows), 1)
 
 
 @dataclass
@@ -70,6 +96,9 @@ def compute_summary(db: Session, user_id: str) -> ProgressSummary:
             practice_count=0, best_score=None, average_score=None,
             weekly_average_score=None, monthly_average_score=None,
             current_streak_days=0, score_trend=[],
+            xp=0, level=1, xp_to_next_level=XP_PER_LEVEL,
+            weekly_practice_count=0, weekly_challenge_target=WEEKLY_CHALLENGE_TARGET,
+            platform_average_score=compute_platform_average(db),
         )
 
     scores = [analysis.overall_score for _, analysis in rows]
@@ -93,6 +122,8 @@ def compute_summary(db: Session, user_id: str) -> ProgressSummary:
         for s, a in rows[-30:]
     ]
 
+    xp, level, xp_to_next_level = _compute_xp(len(rows), sum(scores))
+
     return ProgressSummary(
         practice_count=len(rows),
         best_score=best_score,
@@ -101,6 +132,12 @@ def compute_summary(db: Session, user_id: str) -> ProgressSummary:
         monthly_average_score=monthly_avg,
         current_streak_days=streak,
         score_trend=trend,
+        xp=xp,
+        level=level,
+        xp_to_next_level=xp_to_next_level,
+        weekly_practice_count=len(weekly_scores),
+        weekly_challenge_target=WEEKLY_CHALLENGE_TARGET,
+        platform_average_score=compute_platform_average(db),
     )
 
 

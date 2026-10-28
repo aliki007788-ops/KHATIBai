@@ -32,6 +32,12 @@ export const endpoints = {
   },
   practice: {
     suggest: "/api/practice/suggest",
+    coachTicket: "/api/practice/coach-ticket",
+  },
+  share: {
+    create: (speechId: string) => `/api/speech/${speechId}/share`,
+    publicView: (token: string) => `/api/public/speech/${token}`,
+    comments: (token: string) => `/api/public/speech/${token}/comments`,
   },
   team: {
     me: "/api/team/me",
@@ -40,6 +46,11 @@ export const endpoints = {
     leave: "/api/team/leave",
     members: "/api/team/members",
     exportCsv: "/api/team/export.csv",
+    delete: "/api/team/delete",
+    transfer: "/api/team/transfer",
+    setRole: "/api/team/members/role",
+    removeMember: "/api/team/members/remove",
+    regenerateInvite: "/api/team/invite/regenerate",
   },
   billing: {
     subscription: "/api/billing/subscription",

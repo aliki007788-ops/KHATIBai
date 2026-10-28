@@ -11,6 +11,14 @@ class ProgressSummaryResponse(BaseModel):
     monthly_average_score: float | None
     current_streak_days: int
     score_trend: list[dict]
+    # گیمیفیکیشن
+    xp: int
+    level: int
+    xp_to_next_level: int
+    weekly_practice_count: int
+    weekly_challenge_target: int
+    # مقایسه ناشناس با میانگین کل کاربران پلتفرم
+    platform_average_score: float | None
 
 
 class DimensionTrendResponse(BaseModel):

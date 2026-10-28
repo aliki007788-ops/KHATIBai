@@ -18,6 +18,22 @@ export const teamService = {
   leave: async () => {
     await apiClient.post(endpoints.team.leave);
   },
+  deleteTeam: async () => {
+    await apiClient.post(endpoints.team.delete);
+  },
+  transferOwnership: async (userId: string) => {
+    await apiClient.post(endpoints.team.transfer, { user_id: userId });
+  },
+  setMemberRole: async (userId: string, role: "manager" | "member") => {
+    await apiClient.post(endpoints.team.setRole, { user_id: userId, role });
+  },
+  removeMember: async (userId: string) => {
+    await apiClient.post(endpoints.team.removeMember, { user_id: userId });
+  },
+  regenerateInvite: async () => {
+    const res = await apiClient.post<Organization>(endpoints.team.regenerateInvite);
+    return res.data;
+  },
   members: async () => {
     const res = await apiClient.get<MemberProgress[]>(endpoints.team.members);
     return res.data;

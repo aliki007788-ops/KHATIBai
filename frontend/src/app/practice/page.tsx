@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useCreateAudioSpeech, useSpeech, useSpeechList } from "@/features/speech/hooks";
 import { useSuggestPractice } from "@/features/practice/hooks";
+import { practiceService } from "@/features/practice/practice.service";
 import { toPersianNumber } from "@/lib/utils/number";
 import {
   Mic, Square, Lightbulb, Paperclip, History, Sparkles,
@@ -110,6 +111,8 @@ export default function PracticePage() {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const muteGainRef = useRef<GainNode | null>(null);
+  // هر اتصال مربی زنده یک شماره‌ی جلسه دارد؛ اگر کاربر وسط گرفتن بلیت ضبط را قطع کند، اتصال کهنه باز نمی‌شود.
+  const coachSessionRef = useRef(0);
 
   const createAudio = useCreateAudioSpeech();
   const { data: recentSpeeches } = useSpeechList();
@@ -146,6 +149,40 @@ export default function PracticePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, level]);
+
+  // اگر از یک «مسیر آموزشی چندهفته‌ای» با mode/level/id مشخص به این صفحه آمده‌ایم،
+  // همان حالت و متن دقیق آن هفته را انتخاب می‌کنیم (بدون بازنویسی سایر منطق بالا).
+  const queryParamsAppliedRef = useRef(false);
+  const queryItemAppliedRef = useRef(false);
+
+  useEffect(() => {
+    if (queryParamsAppliedRef.current) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const qMode = params.get("mode");
+    const qLevel = params.get("level");
+    if (!qMode) return;
+    queryParamsAppliedRef.current = true;
+    if (qMode === "script" || qMode === "impromptu" || qMode === "presentation" || qMode === "free") {
+      setMode(qMode as PracticeMode);
+    }
+    if (qLevel === "beginner" || qLevel === "intermediate" || qLevel === "advanced") {
+      setLevel(qLevel as PracticeLevel);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!queryParamsAppliedRef.current || queryItemAppliedRef.current) return;
+    if (typeof window === "undefined") return;
+    const qId = new URLSearchParams(window.location.search).get("id");
+    if (!qId) return;
+    const item = activeBank.find((b) => b.id === qId);
+    if (item) {
+      applyBankItem(item);
+      queryItemAppliedRef.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBank]);
 
   // گفتگوی پیشنهاد-و-تأیید: پیشنهاد هوش مصنوعی فقط در یک پیش‌نمایش نشان داده
   // می‌شود و تا وقتی کاربر «تایید و استفاده» را نزند، جایگزین متن تمرین نمی‌شود.
@@ -207,6 +244,7 @@ export default function PracticePage() {
   }, []);
 
   const closeLiveCoach = () => {
+    coachSessionRef.current += 1;
     try {
       processorRef.current?.disconnect();
       sourceRef.current?.disconnect();
@@ -231,9 +269,48 @@ export default function PracticePage() {
     setCoachConnected(false);
   };
 
-  const connectLiveCoach = (stream: MediaStream) => {
+  const connectLiveCoach = async (stream: MediaStream) => {
+    const sessionId = ++coachSessionRef.current;
     try {
-      const ws = new WebSocket(WS_URL);
+      // ۱) گراف صدا همین‌جا و بدون await ساخته می‌شود (داخل همان تعامل کاربر)، چون سافاری و برخی
+      //    مرورگرها AudioContextِ ساخته‌شده بعد از await را suspended نگه می‌دارند.
+      const AudioContextCtor: typeof AudioContext =
+        window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const audioCtx = new AudioContextCtor();
+      audioCtxRef.current = audioCtx;
+      if (audioCtx.state === "suspended") {
+        void audioCtx.resume();
+      }
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      sourceRef.current = source;
+
+      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
+
+      const muteGain = audioCtx.createGain();
+      muteGain.gain.value = 0;
+      muteGainRef.current = muteGain;
+
+      processor.onaudioprocess = (e) => {
+        if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+        const input = e.inputBuffer.getChannelData(0);
+        const downsampled = downsampleBuffer(input, audioCtx.sampleRate, REALTIME_SAMPLE_RATE);
+        const pcm16 = floatTo16BitPCM(downsampled);
+        wsRef.current.send(pcm16.buffer as ArrayBuffer);
+      };
+
+      // processor must be connected to a destination to fire onaudioprocess;
+      // route it through a silent gain node so the user never hears an echo.
+      source.connect(processor);
+      processor.connect(muteGain);
+      muteGain.connect(audioCtx.destination);
+
+      // ۲) بلیت کوتاه‌مدت از سرور می‌گیریم (WebSocket هدر Authorization ندارد) و بعد وصل می‌شویم.
+      const { ticket } = await practiceService.coachTicket();
+      if (sessionId !== coachSessionRef.current) return; // کاربر در این فاصله ضبط را قطع کرده
+
+      const ws = new WebSocket(`${WS_URL}?ticket=${encodeURIComponent(ticket)}`);
       wsRef.current = ws;
 
       ws.onopen = () => setCoachConnected(true);
@@ -260,35 +337,6 @@ export default function PracticePage() {
           /* non-JSON or unrecognized event — ignore */
         }
       };
-
-      const AudioContextCtor: typeof AudioContext =
-        window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const audioCtx = new AudioContextCtor();
-      audioCtxRef.current = audioCtx;
-
-      const source = audioCtx.createMediaStreamSource(stream);
-      sourceRef.current = source;
-
-      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-      processorRef.current = processor;
-
-      const muteGain = audioCtx.createGain();
-      muteGain.gain.value = 0;
-      muteGainRef.current = muteGain;
-
-      processor.onaudioprocess = (e) => {
-        if (wsRef.current?.readyState !== WebSocket.OPEN) return;
-        const input = e.inputBuffer.getChannelData(0);
-        const downsampled = downsampleBuffer(input, audioCtx.sampleRate, REALTIME_SAMPLE_RATE);
-        const pcm16 = floatTo16BitPCM(downsampled);
-        wsRef.current.send(pcm16.buffer);
-      };
-
-      // processor must be connected to a destination to fire onaudioprocess;
-      // route it through a silent gain node so the user never hears an echo.
-      source.connect(processor);
-      processor.connect(muteGain);
-      muteGain.connect(audioCtx.destination);
     } catch (err) {
       console.error("Live coach setup error:", err);
       setCoachConnected(false);
@@ -327,7 +375,7 @@ export default function PracticePage() {
 
       // Parallel PCM16 pipeline for the live coach — independent of the
       // MediaRecorder webm blob, which is still used for the final upload.
-      connectLiveCoach(stream);
+      void connectLiveCoach(stream);
     } catch (err) {
       console.error("Microphone error:", err);
       setErrorMessage(t("micError", language));
@@ -338,8 +386,8 @@ export default function PracticePage() {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
       mediaRecorder.stream.getTracks().forEach((track) => track.stop());
-      setIsRecording(false);
     }
+    setIsRecording(false);
     closeLiveCoach();
   };
 
@@ -551,7 +599,7 @@ export default function PracticePage() {
                 ))}
               </div>
               <div className="flex flex-col items-center gap-6">
-                <div className="text-5xl font-mono">{formatTime(timer)}</div>
+                <div className="text-5xl font-mono">{formatTime(Math.floor(timer / 10))}</div>
                 <button
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={isProcessing || isUploading}

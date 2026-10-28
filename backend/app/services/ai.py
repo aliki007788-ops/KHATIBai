@@ -219,14 +219,14 @@ def suggest_practice_topic(
     hint: str | None = None,
     previous_title: str | None = None,
 ) -> PracticeSuggestionResponse:
-    system, user = build_practice_suggestion_prompt(mode, level, hint, previous_title)
+    system, user = build_practice_suggestion_prompt(mode, level, hint=hint, previous_title=previous_title)
     prompt_version = PROMPT_VERSIONS["practice_suggestion"]
 
     try:
         result, provider_used, model, retries = _call_with_fallback(system, user)
         parsed = _parse_structured(result.content, PracticeSuggestionResponse)
-        # از نوع chat_reply برای لاگ استفاده می‌شود تا نیازی به migration جدید
-        # روی enum دیتابیس AITaskType نباشد.
+        # از نوع chat_reply برای لاگ استفاده می‌شود تا نیازی به migration جدید روی enum
+        # دیتابیس AITaskType نباشد؛ برای جداسازی در آمار از prompt_version (practice_suggestion_v2) استفاده کنید.
         _log_request(
             db, user_id, AITaskType.chat_reply, prompt_version,
             provider_used, model, AIRequestStatus.success,

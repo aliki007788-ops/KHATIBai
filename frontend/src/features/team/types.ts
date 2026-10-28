@@ -10,7 +10,8 @@ export interface Organization {
 export interface MemberProgress {
   user_id: string;
   name: string | null;
-  email: string;
+  /** فقط برای مالک/مدیر پر است؛ برای اعضای ساده null است */
+  email: string | null;
   role: "owner" | "manager" | "member";
   joined_at: string;
   practice_count: number;

@@ -19,6 +19,7 @@ export function Sidebar({ role = 'user' }: SidebarProps) {
     { name: 'آموزش عراقی', icon: '🗣️', href: '/learn' },
     { name: 'تاریخچه', icon: '🕒', href: '/history' },
     { name: 'پیشرفت من', icon: '📈', href: '/progress' },
+    { name: 'مسیرهای آموزشی', icon: '🎓', href: '/paths' },
     { name: 'تیم من', icon: '🧑‍🤝‍🧑', href: '/team' },
     { name: 'تنظیمات', icon: '⚙️', href: '/settings' },
   ];
@@ -31,10 +32,22 @@ export function Sidebar({ role = 'user' }: SidebarProps) {
     { name: 'تنظیمات سیستم', icon: '⚙️', href: '/admin/settings' },
     { name: 'استودیوی سخنرانی', icon: '🎙️', href: '/practice' },
     { name: 'داشبورد کاربری', icon: '📊', href: '/dashboard' },
+    { name: 'مسیرهای آموزشی', icon: '🎓', href: '/paths' },
     { name: 'تیم من', icon: '🧑‍🤝‍🧑', href: '/team' },
   ];
 
   const menuItems = role === 'admin' ? adminMenu : userMenu;
+
+  // آیتمی فعال است که طولانی‌ترین href منطبق با مسیر فعلی را دارد
+  // (تا /practice/123 هم «استودیو» را فعال کند ولی /admin/users داشبورد ادمین را فعال نکند).
+  const currentPath = pathname ?? '';
+  const matchingItems = menuItems.filter(
+    (item) => currentPath === item.href || currentPath.startsWith(item.href + '/')
+  );
+  const activeHref = matchingItems.reduce<string | null>(
+    (best, item) => (best === null || item.href.length > best.length ? item.href : best),
+    null
+  );
 
   return (
     <aside 
@@ -61,7 +74,7 @@ export function Sidebar({ role = 'user' }: SidebarProps) {
 
       <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
         {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = item.href === activeHref;
           return (
             <Link 
               key={item.href} 

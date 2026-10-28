@@ -41,3 +41,44 @@ export function useLeaveTeam() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
   });
 }
+
+export function useDeleteTeam() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => teamService.deleteTeam(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+export function useTransferOwnership() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => teamService.transferOwnership(userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+export function useSetMemberRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: "manager" | "member" }) =>
+      teamService.setMemberRole(userId, role),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+export function useRemoveMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => teamService.removeMember(userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+export function useRegenerateInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => teamService.regenerateInvite(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}

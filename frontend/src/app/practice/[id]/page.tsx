@@ -28,6 +28,7 @@ import {
   DELIVERY_DIMENSION_ORDER,
 } from "@/features/practice/constants";
 import { analyzeTranscript } from "@/features/practice/textAnalysis";
+import { useCreateShare } from "@/features/share/hooks";
 
 // ---------- یک کارت تحلیل کلیک‌پذیر ----------
 interface CardModel {
@@ -232,11 +233,21 @@ export default function PracticeDetailPage({
   const [activeCard, setActiveCard] = useState<CardModel | null>(null);
 
   const { data, isLoading, isError, refetch } = useSpeech(id);
+  const createShare = useCreateShare();
 
   const isProcessing = data?.status === "pending" || data?.status === "processing";
 
   const handleShare = async () => {
-    const url = window.location.href;
+    // لینک عمومیِ فقط‌خواندنی می‌سازیم (یا همان قبلی را برمی‌گردانیم) تا به‌جای صفحه‌ی خصوصیِ نیازمند ورود،
+    // لینکی قابل‌مشاهده برای هر کسی (مربی/دوستان) به اشتراک گذاشته شود — بدون افشای ایمیل یا حساب کاربری.
+    let url = window.location.href;
+    try {
+      const share = await createShare.mutateAsync(id);
+      url = `${window.location.origin}/share/${share.share_token}`;
+    } catch (err) {
+      console.error("Share-link creation failed, falling back to private URL:", err);
+    }
+
     const text = `${t("shareText", language)}\n${url}`;
 
     if (typeof navigator !== "undefined" && navigator.share) {

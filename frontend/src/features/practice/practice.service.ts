@@ -8,19 +8,34 @@ export interface PracticeSuggestion {
   guidance: string;
 }
 
+export interface SuggestParams {
+  mode: string;
+  level: PracticeLevel;
+  /** موضوع دلخواه کاربر (اختیاری) */
+  hint?: string;
+  /** عنوان پیشنهاد قبلی، برای اینکه «نسخه دیگر» تکراری نباشد */
+  previousTitle?: string;
+}
+
+export interface CoachTicket {
+  ticket: string;
+  expires_in: number;
+}
+
 export const practiceService = {
-  suggest: async (
-    mode: string,
-    level: PracticeLevel,
-    hint?: string,
-    previousTitle?: string
-  ) => {
+  suggest: async ({ mode, level, hint, previousTitle }: SuggestParams) => {
     const res = await apiClient.post<PracticeSuggestion>(endpoints.practice.suggest, {
       mode,
       level,
-      hint: hint || undefined,
+      hint: hint?.trim() || undefined,
       previous_title: previousTitle || undefined,
     });
+    return res.data;
+  },
+
+  // بلیت کوتاه‌مدت و یک‌بارمصرف برای اتصال WebSocket مربی زنده
+  coachTicket: async () => {
+    const res = await apiClient.post<CoachTicket>(endpoints.practice.coachTicket);
     return res.data;
   },
 };

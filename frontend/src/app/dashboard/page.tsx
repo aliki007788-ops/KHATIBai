@@ -10,7 +10,7 @@ import { apiClient } from '@/lib/api/client';
 import { endpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/stores/authStore';
 import { toPersianNumber } from '@/lib/utils/number';
-import { Flame, Trophy, Target, Sparkles } from 'lucide-react';
+import { Flame, Trophy, Target, Sparkles, Zap, Users2 } from 'lucide-react';
 import type { SpeechListItem } from '@/types/speech';
 
 // دقیقاً هم‌شکل با backend/app/schemas/progress.py -> ProgressSummaryResponse
@@ -22,7 +22,16 @@ interface ProgressSummary {
   monthly_average_score: number | null;
   current_streak_days: number;
   score_trend: { date: string; score: number }[];
+  xp: number;
+  level: number;
+  xp_to_next_level: number;
+  weekly_practice_count: number;
+  weekly_challenge_target: number;
+  platform_average_score: number | null;
 }
+
+// دقیقاً هم‌شکل با backend/app/services/progress_engine.py -> XP_PER_LEVEL
+const XP_PER_LEVEL = 200;
 
 interface Badge {
   id: string;
@@ -135,16 +144,79 @@ export default function DashboardPage() {
             <p className="text-[var(--foreground)]/60 text-lg">آماده‌ای تا امروز صدای خودت رو متحول کنی؟</p>
           </div>
 
-          {streak > 0 && (
-            <div className="glass-panel px-5 py-3 rounded-2xl flex items-center gap-2 border border-orange-500/30 bg-orange-500/5">
-              <Flame className="w-6 h-6 text-orange-500" />
-              <div>
-                <div className="text-xl font-bold text-orange-500">{toPersianNumber(streak)} روز</div>
-                <div className="text-xs text-[var(--foreground)]/50">تمرین متوالی</div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {streak > 0 && (
+              <div className="glass-panel px-5 py-3 rounded-2xl flex items-center gap-2 border border-orange-500/30 bg-orange-500/5">
+                <Flame className="w-6 h-6 text-orange-500" />
+                <div>
+                  <div className="text-xl font-bold text-orange-500">{toPersianNumber(streak)} روز</div>
+                  <div className="text-xs text-[var(--foreground)]/50">تمرین متوالی</div>
+                </div>
+              </div>
+            )}
+
+            {progress && (
+              <div className="glass-panel px-5 py-3 rounded-2xl flex items-center gap-2 border border-[#8b5cf6]/30 bg-[#8b5cf6]/5">
+                <Zap className="w-6 h-6 text-[#8b5cf6]" />
+                <div>
+                  <div className="text-xl font-bold text-[#8b5cf6]">سطح {toPersianNumber(progress.level)}</div>
+                  <div className="text-xs text-[var(--foreground)]/50">{toPersianNumber(progress.xp)} XP</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* نوار پیشرفت سطح و چالش هفتگی */}
+        {progress && (
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="glass-panel p-6 rounded-[2rem]">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[#8b5cf6]" />
+                  پیشرفت تا سطح {toPersianNumber(progress.level + 1)}
+                </h3>
+                <span className="text-xs text-[var(--foreground)]/50">
+                  {toPersianNumber(XP_PER_LEVEL - progress.xp_to_next_level)} / {toPersianNumber(XP_PER_LEVEL)}
+                </span>
+              </div>
+              <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#8b5cf6] to-[#10b981] transition-all"
+                  style={{ width: `${Math.min(100, ((XP_PER_LEVEL - progress.xp_to_next_level) / XP_PER_LEVEL) * 100)}%` }}
+                />
+              </div>
+              <div className="text-xs text-[var(--foreground)]/40 mt-2">
+                {toPersianNumber(progress.xp_to_next_level)} XP دیگر تا سطح بعد
               </div>
             </div>
-          )}
-        </section>
+
+            <div className="glass-panel p-6 rounded-[2rem]">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <Target className="w-4 h-4 text-[#10b981]" />
+                  چالش این هفته
+                </h3>
+                <span className="text-xs text-[var(--foreground)]/50">
+                  {toPersianNumber(progress.weekly_practice_count)} / {toPersianNumber(progress.weekly_challenge_target)} تمرین
+                </span>
+              </div>
+              <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#10b981] transition-all"
+                  style={{
+                    width: `${Math.min(100, (progress.weekly_practice_count / progress.weekly_challenge_target) * 100)}%`,
+                  }}
+                />
+              </div>
+              <div className="text-xs text-[var(--foreground)]/40 mt-2">
+                {progress.weekly_practice_count >= progress.weekly_challenge_target
+                  ? 'چالش این هفته را کامل کردید 🎉'
+                  : `${toPersianNumber(progress.weekly_challenge_target - progress.weekly_practice_count)} تمرین دیگر تا تکمیل چالش هفته`}
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Link href="/practice" className="glass-panel p-8 rounded-[2rem] group hover:-translate-y-2 transition-all duration-300 hover:shadow-[0_0_40px_rgba(139,92,246,0.2)] border border-[var(--border-color)]">
@@ -220,6 +292,27 @@ export default function DashboardPage() {
                   <div className="text-xs text-[var(--foreground)]/50 mb-2">روند امتیاز (۱۴ تمرین اخیر)</div>
                   <ScoreTrendChart trend={progress.score_trend} />
                 </div>
+
+                {progress.platform_average_score != null && progress.average_score != null && (
+                  <div className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-xs">
+                    <Users2 className="w-4 h-4 text-[var(--foreground)]/50 shrink-0" />
+                    <span className="text-[var(--foreground)]/60">
+                      میانگین شما{' '}
+                      <span className="font-bold text-[var(--foreground)]">
+                        {toPersianNumber(progress.average_score)}
+                      </span>{' '}
+                      {progress.average_score >= progress.platform_average_score ? (
+                        <span className="text-emerald-400">
+                          بالاتر از میانگین پلتفرم ({toPersianNumber(progress.platform_average_score)}) است
+                        </span>
+                      ) : (
+                        <span className="text-amber-400">
+                          پایین‌تر از میانگین پلتفرم ({toPersianNumber(progress.platform_average_score)}) است
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

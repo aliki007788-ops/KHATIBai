@@ -43,8 +43,9 @@ export function analyzeTranscript(text: string): TranscriptAnalysis {
     return { segments: [], fillerTotal: 0, fillerCounts: [], repeatedWordTotal: 0, repeatedWordCounts: [] };
   }
 
-  // تقسیم متن به توکن‌های کلمه (حروف/اعداد) و غیرکلمه (فاصله/نقطه‌گذاری)
-  const tokens = text.match(/[\p{L}\p{N}]+|[^\p{L}\p{N}]+/gu) ?? [text];
+  // تقسیم متن به توکن‌های کلمه (حروف/اعداد) و غیرکلمه (فاصله/نقطه‌گذاری).
+  // نیم‌فاصله (U+200C) جزو کلمه است؛ وگرنه «رفته‌ام» به «رفته» + «ام» شکسته و «ام» اشتباهاً حشو حساب می‌شود.
+  const tokens = text.match(/[\p{L}\p{N}\u200c]+|[^\p{L}\p{N}\u200c]+/gu) ?? [text];
 
   const segments: TextSegment[] = [];
   const fillerCountMap = new Map<string, number>();

@@ -51,3 +51,6 @@ def downgrade() -> None:
     op.drop_table("organization_members")
     op.drop_index("ix_organizations_invite_code", table_name="organizations")
     op.drop_table("organizations")
+    # در PostgreSQL نوع enum با drop_table پاک نمی‌شود؛ بدون این خط upgrade دوباره خطا می‌دهد.
+    if op.get_bind().dialect.name == "postgresql":
+        op.execute("DROP TYPE IF EXISTS orgroleenum")

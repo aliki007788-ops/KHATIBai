@@ -32,6 +32,7 @@ from app.routers import learning as learning_router
 from app.routers import practice as practice_router
 from app.routers import privacy as privacy_router
 from app.routers import progress as progress_router
+from app.routers import share as share_router
 from app.routers import speech as speech_router
 from app.routers import team as team_router
 from app.routers import translate as translate_router
@@ -146,6 +147,7 @@ def create_app() -> FastAPI:
     app.include_router(privacy_router.router)
     app.include_router(eitaa_router.router)
     app.include_router(team_router.router)
+    app.include_router(share_router.router)
     app.include_router(translate_router.router)
     app.include_router(coach_ws_router.router)
     app.include_router(admin_finance_router.router)  # ✅ اضافه شد
