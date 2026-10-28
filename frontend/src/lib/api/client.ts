@@ -8,6 +8,7 @@ const apiClient = axios.create({
     "Content-Type": "application/json",
   },
   withCredentials: true,
+  timeout: 180_000, // 👈 این خط اضافه شد (۱۸۰ ثانیه = ۳ دقیقه)
 });
 
 // ✅ اینترسپتور برای اضافه کردن توکن به همه درخواست‌ها
