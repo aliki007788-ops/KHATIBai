@@ -1,0 +1,97 @@
+/** Exact paths matching backend routers */
+
+export const endpoints = {
+  auth: {
+    login: "/api/auth/login",
+    register: "/api/auth/register",
+    me: "/api/auth/me",
+    refresh: "/api/auth/refresh",
+    logout: "/api/auth/logout",
+  },
+  progress: {
+    summary: "/api/progress/summary",
+    trends: "/api/progress/trends",
+  },
+  learning: {
+    daily: "/api/learning/daily-recommendation",
+    levels: "/api/learning/levels",
+    scenarios: (levelId: string) => `/api/learning/levels/${levelId}/scenarios`,
+    start: (scenarioId: string) => `/api/learning/scenarios/${scenarioId}/start`,
+    complete: (scenarioId: string) => `/api/learning/scenarios/${scenarioId}/complete`,
+  },
+  courseProgress: {
+    me: "/api/course-progress/me",
+    path: (pathId: string) => `/api/course-progress/${pathId}`,
+    mark: "/api/course-progress/mark",
+    unmark: (pathId: string, weekId: string) => `/api/course-progress/${pathId}/${weekId}`,
+  },
+  chat: {
+    conversations: "/api/chat/conversations",
+    conversation: (id: string) => `/api/chat/conversations/${id}`,
+    messages: (id: string) => `/api/chat/conversations/${id}/messages`,
+  },
+  speech: {
+    audio: "/api/speech/audio",
+    text: "/api/speech/text",
+    list: "/api/speech",
+    detail: (id: string) => `/api/speech/${id}`,
+  },
+  practice: {
+    suggest: "/api/practice/suggest",
+    coachTicket: "/api/practice/coach-ticket",
+    pronunciationFeedback: "/api/practice/pronunciation-feedback",
+  },
+  audience: {
+    sessions: "/api/audience/sessions",
+  },
+  video: {
+    analyses: "/api/video/analyses",
+    analysis: (id: string) => `/api/video/analyses/${id}`,
+  },
+  meetings: {
+    list: "/api/meetings",
+    create: "/api/meetings",
+    end: (id: string) => `/api/meetings/${id}/end`,
+  },
+  share: {
+    create: (speechId: string) => `/api/speech/${speechId}/share`,
+    status: (speechId: string) => `/api/speech/${speechId}/share`,
+    update: (speechId: string) => `/api/speech/${speechId}/share`,
+    revoke: (speechId: string) => `/api/speech/${speechId}/share`,
+    publicView: (token: string) => `/api/public/speech/${token}`,
+    comments: (token: string) => `/api/public/speech/${token}/comments`,
+  },
+  team: {
+    me: "/api/team/me",
+    create: "/api/team/create",
+    join: "/api/team/join",
+    leave: "/api/team/leave",
+    members: "/api/team/members",
+    exportCsv: "/api/team/export.csv",
+    delete: "/api/team/delete",
+    transfer: "/api/team/transfer",
+    setRole: "/api/team/members/role",
+    removeMember: "/api/team/members/remove",
+    regenerateInvite: "/api/team/invite/regenerate",
+  },
+  billing: {
+    subscription: "/api/billing/subscription",
+    history: "/api/billing/history",
+    checkout: "/api/billing/checkout",
+  },
+  eitaa: {
+    linkStatus: "/api/eitaa/link-status",
+  },
+  privacy: {
+    export: "/api/privacy/export",
+    deleteAccount: "/api/privacy/delete-account",
+  },
+  admin: {
+    stats: "/api/admin/stats",
+    users: "/api/admin/users",
+    user: (id: string) => `/api/admin/users/${id}`,
+    transactions: "/api/admin/transactions",
+    subscriptions: "/api/admin/subscriptions",
+    audit: "/api/admin/audit",
+  },
+} as const;
