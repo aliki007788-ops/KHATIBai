@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from app.core.entitlements import require_section
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.db import get_db
@@ -7,7 +9,7 @@ from app.routers.auth import get_current_user
 from app.schemas.audience import AudienceSessionCreate, AudienceSessionResponse
 from app.services import audience_service
 
-router = APIRouter(prefix="/api/audience", tags=["audience"])
+router = APIRouter(prefix="/api/audience", tags=["audience"], dependencies=[Depends(require_section("audience"))])
 
 @router.post("/sessions", response_model=AudienceSessionResponse)
 def create_session(

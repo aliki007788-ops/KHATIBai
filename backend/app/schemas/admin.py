@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from datetime import datetime
 from typing import Optional
 
@@ -36,6 +38,10 @@ class AdminUserResponse(BaseModel):
 
 class SetUserPlanRequest(BaseModel):
     plan: str
+
+
+class SetUserRoleRequest(BaseModel):
+    role: Literal["user", "admin"]
 
 
 class SetUserActiveRequest(BaseModel):

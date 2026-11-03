@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.core.entitlements import require_section
+
 import csv
 import io
 
@@ -23,7 +25,7 @@ from app.services import team_service
 from app.services.csv_utils import csv_safe
 from app.services.team_service import TeamServiceError
 
-router = APIRouter(prefix="/api/team", tags=["team"])
+router = APIRouter(prefix="/api/team", tags=["team"], dependencies=[Depends(require_section("team"))])
 
 # جلوگیری از حدس‌زدن کد دعوت (brute force) — per-process
 _join_limiter = SlidingWindowLimiter(max_events=10, window_seconds=600)

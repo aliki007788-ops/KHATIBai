@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.core.entitlements import require_section
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -9,7 +11,7 @@ from app.core.models import User
 from app.routers.auth import get_current_user
 from app.services import ai as ai_service
 
-router = APIRouter(prefix="/api/translate", tags=["translate"])
+router = APIRouter(prefix="/api/translate", tags=["translate"], dependencies=[Depends(require_section("translator"))])
 
 
 class TranslateRequest(BaseModel):

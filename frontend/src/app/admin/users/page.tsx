@@ -13,6 +13,8 @@ import { endpoints } from "@/lib/api/endpoints";
 import { toPersianNumber } from "@/lib/utils/number";
 import { Search, UserCheck, UserX, Plus, X, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { getErrorMessage } from "@/lib/api/errors";
+import { useAdminPlans } from "@/features/plans/plans";
 
 interface AdminUser {
   id: string;
@@ -30,6 +32,8 @@ export default function AdminUsersPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "" });
   const queryClient = useQueryClient();
+  const { data: plans } = useAdminPlans();
+  const planName = (code: string) => plans?.find((p) => p.code === code)?.name_fa ?? code;
 
   // دریافت لیست کاربران
   const { data: users, isLoading, isError, refetch } = useQuery<AdminUser[]>({
@@ -64,6 +68,19 @@ export default function AdminUsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
     },
+    onError: (e) => alert(getErrorMessage(e)),
+  });
+
+  // تغییر نقش کاربر (کاربر ⇄ مدیر)
+  const changeRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      const res = await apiClient.patch(`${endpoints.admin.users}/${userId}/role`, { role });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+    onError: (e) => alert(getErrorMessage(e)),
   });
 
   // ایجاد کاربر جدید
@@ -78,8 +95,8 @@ export default function AdminUsersPage() {
       setNewUser({ name: "", email: "", password: "" });
       alert("کاربر با موفقیت ایجاد شد.");
     },
-    onError: () => {
-      alert("خطا در ایجاد کاربر.");
+    onError: (e) => {
+      alert(getErrorMessage(e));
     },
   });
 
@@ -96,13 +113,8 @@ export default function AdminUsersPage() {
   };
 
   const getPlanBadge = (plan: string) => {
-    const plans: Record<string, { label: string; color: string }> = {
-      free: { label: "رایگان", color: "bg-gray-500/10 text-gray-500" },
-      pro: { label: "حرفه‌ای", color: "bg-[#8b5cf6]/10 text-[#8b5cf6]" },
-      enterprise: { label: "سازمانی", color: "bg-[#3b82f6]/10 text-[#3b82f6]" },
-    };
-    const p = plans[plan] || { label: plan, color: "bg-gray-500/10 text-gray-500" };
-    return <span className={cn("px-2.5 py-1 rounded-full text-xs font-medium", p.color)}>{p.label}</span>;
+    const color = plan === "free" ? "bg-gray-500/10 text-gray-500" : "bg-[#8b5cf6]/10 text-[#8b5cf6]";
+    return <span className={cn("px-2.5 py-1 rounded-full text-xs font-medium", color)}>{planName(plan)}</span>;
   };
 
   return (
@@ -114,7 +126,7 @@ export default function AdminUsersPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-color)] pb-6">
             <div>
               <h1 className="text-2xl font-bold text-[var(--foreground)]">مدیریت کاربران</h1>
-              <p className="text-[var(--foreground)]/60 mt-1">مشاهده، ویرایش پلن و افزودن کاربر جدید</p>
+              <p className="text-[var(--foreground)]/60 mt-1">مشاهده، ویرایش پلن و نقش، و افزودن کاربر جدید</p>
             </div>
             <div className="flex gap-3">
               <Button onClick={() => setIsAddModalOpen(true)}>
@@ -179,12 +191,22 @@ export default function AdminUsersPage() {
                           </td>
                           <td className="p-4 text-sm text-[var(--foreground)]/60" dir="ltr">{user.email}</td>
                           <td className="p-4">
-                            <span className={cn(
-                              "px-2 py-1 rounded-full text-xs font-medium",
-                              user.role === "admin" ? "bg-[#ff7b54]/10 text-[#ff7b54]" : "bg-gray-500/10 text-gray-500"
-                            )}>
-                              {user.role === "admin" ? "مدیر" : "کاربر"}
-                            </span>
+                            {user.role === "superadmin" ? (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#ff7b54]/10 text-[#ff7b54]">مدیر ارشد</span>
+                            ) : (
+                              <select
+                                value={user.role}
+                                onChange={(e) => {
+                                  if (confirm("نقش این کاربر تغییر کند؟")) {
+                                    changeRoleMutation.mutate({ userId: user.id, role: e.target.value });
+                                  }
+                                }}
+                                className="text-xs border border-[var(--border-color)] rounded-lg px-2 py-1 bg-[var(--background)] text-[var(--foreground)]"
+                              >
+                                <option value="user">کاربر</option>
+                                <option value="admin">مدیر</option>
+                              </select>
+                            )}
                           </td>
                           <td className="p-4">
                             <select
@@ -192,10 +214,14 @@ export default function AdminUsersPage() {
                               onChange={(e) => changePlanMutation.mutate({ userId: user.id, plan: e.target.value })}
                               className="text-xs border border-[var(--border-color)] rounded-lg px-2 py-1 bg-[var(--background)] text-[var(--foreground)]"
                             >
-                              <option value="free">رایگان</option>
-                              <option value="base">پایه</option>
-                              <option value="pro">حرفه‌ای</option>
-                              <option value="enterprise">سازمانی</option>
+                              {plans?.map((p) => (
+                                <option key={p.code} value={p.code}>
+                                  {p.name_fa}{p.is_active ? "" : " (غیرفعال)"}
+                                </option>
+                              ))}
+                              {plans && !plans.some((p) => p.code === user.plan) && (
+                                <option value={user.plan}>{user.plan}</option>
+                              )}
                             </select>
                           </td>
                           <td className="p-4 text-sm text-[var(--foreground)]/60">

@@ -18,11 +18,21 @@ class LevelResponse(BaseModel):
 
 class ScenarioResponse(BaseModel):
     id: str
+    slug: str | None = None
     category: ScenarioCategory
     order_index: int
     title_fa: str
+    title_iq: str | None = None
     description_fa: str
-    key_vocabulary: list
+    situation: str | None = None
+    objectives: list = []
+    key_vocabulary: list = []
+    model_dialogue: list = []
+    success_criteria: list = []
+    common_mistakes: list = []
+    cultural_note: str | None = None
+    difficulty: int = 1
+    estimated_minutes: int = 8
     status: ScenarioProgressStatus
     unlocked: bool
 

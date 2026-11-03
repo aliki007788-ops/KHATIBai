@@ -5,11 +5,15 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.core.models import PaymentStatus, PlanEnum, SubscriptionStatus
+from typing import Literal
+
+from app.core.models import PaymentStatus, SubscriptionStatus
 
 
 class CheckoutRequest(BaseModel):
-    plan: PlanEnum
+    plan: str
+    period: Literal["monthly", "yearly"] = "monthly"
+    provider: Literal["demo", "zarinpal"] | None = None
 
 
 class CheckoutResponse(BaseModel):
@@ -20,8 +24,9 @@ class CheckoutResponse(BaseModel):
 
 class TransactionResponse(BaseModel):
     id: str
-    plan: PlanEnum
+    plan: str
     amount_toman: int
+    billing_period: str = "monthly"
     status: PaymentStatus
     provider: str
     ref_id: str | None
@@ -31,7 +36,7 @@ class TransactionResponse(BaseModel):
 
 
 class SubscriptionResponse(BaseModel):
-    plan: PlanEnum
+    plan: str
     status: SubscriptionStatus
     starts_at: datetime
     expires_at: datetime
@@ -41,6 +46,6 @@ class SubscriptionResponse(BaseModel):
 
 
 class NoActiveSubscriptionResponse(BaseModel):
-    plan: PlanEnum = PlanEnum.free
+    plan: str = "free"
     status: str = "none"
     message: str = "کاربر در حال حاضر اشتراک فعالی ندارد و از پلن رایگان استفاده می‌کند."

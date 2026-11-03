@@ -51,10 +51,20 @@ class SpeechAnalysisResponse(BaseModel):
 
 
 class ChatReplyResponse(BaseModel):
-    reply: str = Field(max_length=2000)
+    """پاسخ استاندارد آموزشی مربی عراقی."""
+    user_iraqi: str = Field(
+        default="",
+        max_length=1000,
+        description="معادل طبیعی عراقی همان پیام کاربر",
+    )
+    reply: str = Field(max_length=2000, description="جواب مربی به گویش عراقی")
+    next_suggestions: list[str] = Field(
+        default_factory=list,
+        max_length=5,
+        description="۲ تا ۴ جمله پیشنهادی برای نوبت بعد کاربر",
+    )
     corrections: list[str] = Field(default_factory=list, max_length=10)
-    suggestions: list[str] = Field(default_factory=list, max_length=8)
-    vocabulary: list[str] = Field(default_factory=list, max_length=8)
+    vocabulary: list[str] = Field(default_factory=list, max_length=10)
     notes: str | None = Field(default=None, max_length=500)
 
 

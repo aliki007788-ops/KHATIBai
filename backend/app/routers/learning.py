@@ -22,16 +22,25 @@ def list_levels(current_user: User = Depends(get_current_user), db: Session = De
     items = learning_engine.get_levels_with_progress(db, current_user.id)
     return [
         LevelResponse(
-            id=i.level.id, code=i.level.code, name_fa=i.level.name_fa,
-            order_index=i.level.order_index, description_fa=i.level.description_fa,
-            unlocked=i.unlocked, completed_count=i.completed_count, total_count=i.total_count,
+            id=i.level.id,
+            code=i.level.code,
+            name_fa=i.level.name_fa,
+            order_index=i.level.order_index,
+            description_fa=i.level.description_fa,
+            unlocked=i.unlocked,
+            completed_count=i.completed_count,
+            total_count=i.total_count,
         )
         for i in items
     ]
 
 
 @router.get("/levels/{level_id}/scenarios", response_model=list[ScenarioResponse])
-def list_scenarios(level_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_scenarios(
+    level_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
         items = learning_engine.get_scenarios_for_level(db, current_user.id, level_id)
     except learning_engine.LearningEngineError as exc:
@@ -39,16 +48,35 @@ def list_scenarios(level_id: str, current_user: User = Depends(get_current_user)
 
     return [
         ScenarioResponse(
-            id=i.scenario.id, category=i.scenario.category, order_index=i.scenario.order_index,
-            title_fa=i.scenario.title_fa, description_fa=i.scenario.description_fa,
-            key_vocabulary=i.scenario.key_vocabulary, status=i.status, unlocked=i.unlocked,
+            id=i.scenario.id,
+            slug=getattr(i.scenario, "slug", None),
+            category=i.scenario.category,
+            order_index=i.scenario.order_index,
+            title_fa=i.scenario.title_fa,
+            title_iq=getattr(i.scenario, "title_iq", None),
+            description_fa=i.scenario.description_fa,
+            situation=getattr(i.scenario, "situation", None),
+            objectives=getattr(i.scenario, "objectives", None) or [],
+            key_vocabulary=i.scenario.key_vocabulary or [],
+            model_dialogue=getattr(i.scenario, "model_dialogue", None) or [],
+            success_criteria=getattr(i.scenario, "success_criteria", None) or [],
+            common_mistakes=getattr(i.scenario, "common_mistakes", None) or [],
+            cultural_note=getattr(i.scenario, "cultural_note", None),
+            difficulty=getattr(i.scenario, "difficulty", 1) or 1,
+            estimated_minutes=getattr(i.scenario, "estimated_minutes", 8) or 8,
+            status=i.status,
+            unlocked=i.unlocked,
         )
         for i in items
     ]
 
 
 @router.post("/scenarios/{scenario_id}/start", response_model=StartScenarioResponse)
-def start_scenario(scenario_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def start_scenario(
+    scenario_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
         conv = learning_engine.start_scenario(db, current_user, scenario_id)
     except learning_engine.LearningEngineError as exc:
@@ -57,7 +85,11 @@ def start_scenario(scenario_id: str, current_user: User = Depends(get_current_us
 
 
 @router.post("/scenarios/{scenario_id}/complete", status_code=status.HTTP_204_NO_CONTENT)
-def complete_scenario(scenario_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def complete_scenario(
+    scenario_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
         learning_engine.complete_scenario(db, current_user, scenario_id)
     except learning_engine.LearningEngineError as exc:
@@ -66,6 +98,15 @@ def complete_scenario(scenario_id: str, current_user: User = Depends(get_current
 
 
 @router.get("/daily-recommendation", response_model=DailyRecommendationResponse)
-def daily_recommendation(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def daily_recommendation(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     rec = learning_engine.get_daily_recommendation(db, current_user)
-    return DailyRecommendationResponse(**rec.__dict__)
+    return DailyRecommendationResponse(
+        kind=rec.kind,
+        title_fa=rec.title_fa,
+        description_fa=rec.description_fa,
+        action_scenario_id=rec.action_scenario_id,
+        action_topic_label=rec.action_topic_label,
+    )

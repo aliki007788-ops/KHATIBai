@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.core.entitlements import require_section
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -9,7 +11,7 @@ from app.routers.auth import get_current_user
 from app.schemas.course_progress import MarkWeekRequest, PathProgressResponse, WeekProgressItem
 from app.services import course_progress_service
 
-router = APIRouter(prefix="/api/course-progress", tags=["course-progress"])
+router = APIRouter(prefix="/api/course-progress", tags=["course-progress"], dependencies=[Depends(require_section("paths"))])
 
 
 @router.get("/me", response_model=list[WeekProgressItem])

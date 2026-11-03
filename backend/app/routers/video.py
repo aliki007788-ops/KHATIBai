@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.core.entitlements import require_section
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -9,7 +11,7 @@ from app.routers.auth import get_current_user
 from app.schemas.video import VideoAnalysisCreate, VideoAnalysisResponse
 from app.services import video_service
 
-router = APIRouter(prefix="/api/video", tags=["video"])
+router = APIRouter(prefix="/api/video", tags=["video"], dependencies=[Depends(require_section("video"))])
 
 
 @router.post("/analyses", response_model=VideoAnalysisResponse)

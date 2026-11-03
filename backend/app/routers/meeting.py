@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.core.entitlements import require_section
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -10,7 +12,7 @@ from app.schemas.meeting import CreateMeetingRequest, EndMeetingRequest, Meeting
 from app.services import meeting_service
 from app.services.meeting_service import MeetingServiceError
 
-router = APIRouter(prefix="/api/meetings", tags=["meetings"])
+router = APIRouter(prefix="/api/meetings", tags=["meetings"], dependencies=[Depends(require_section("meetings"))])
 
 
 def _to_resp(row) -> MeetingSessionResponse:

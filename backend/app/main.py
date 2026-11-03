@@ -1,4 +1,4 @@
-﻿"""
+"""
 Application entrypoint — Full Khatib application (production candidate).
 """
 from __future__ import annotations
@@ -42,6 +42,8 @@ from app.routers import course_progress as course_progress_router
 from app.routers import meeting as meeting_router
 from app.routers import video as video_router
 from app.routers import audience as audience_router
+from app.routers import plans as plans_router
+from app.routers import admin_plans as admin_plans_router
 
 logger = logging.getLogger("khatib")
 
@@ -162,6 +164,8 @@ def create_app() -> FastAPI:
     app.include_router(meeting_router.router)
     app.include_router(video_router.router)
     app.include_router(audience_router.router)
+    app.include_router(plans_router.router)
+    app.include_router(admin_plans_router.router)
 
     _override_openapi_version(app, "3.0.3")
 

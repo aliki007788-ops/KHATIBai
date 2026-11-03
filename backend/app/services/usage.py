@@ -17,8 +17,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.models import PlanEnum, User
-from app.core.plans import get_plan_limits
+from app.core.models import User
+from app.services import plan_service
 
 
 def _current_period() -> tuple[datetime, datetime]:
@@ -63,7 +63,7 @@ class UsageResult:
 
 
 def try_consume_speech(db: Session, user: User, audio_seconds: int = 0) -> UsageResult:
-    limits = get_plan_limits(user.plan)
+    limits = plan_service.limits_for(db, plan_service.effective_plan_code(user))
     start, _ = _current_period()
 
     _ensure_counter_row(db, user.id)

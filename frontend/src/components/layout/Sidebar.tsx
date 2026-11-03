@@ -34,6 +34,8 @@ export function Sidebar({ role = "user" }: SidebarProps) {
     { name: tUI("adminDash", lang), icon: "🛡️", href: "/admin" },
     { name: tUI("adminUsers", lang), icon: "👥", href: "/admin/users" },
     { name: tUI("adminFinance", lang), icon: "💰", href: "/admin/finance" },
+    { name: "مدیریت پلن‌ها", icon: "🧩", href: "/admin/plans" },
+    { name: "گزارش فعالیت‌ها", icon: "🧾", href: "/admin/audit" },
     { name: tUI("adminContent", lang), icon: "📝", href: "/admin/content" },
     { name: tUI("adminSettings", lang), icon: "⚙️", href: "/admin/settings" },
     { name: tUI("practice", lang), icon: "🎙️", href: "/practice" },

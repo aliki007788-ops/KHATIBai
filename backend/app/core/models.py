@@ -24,6 +24,7 @@ from sqlalchemy import (
     JSON,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.types import TypeDecorator
 
 from app.core.db import Base
 
@@ -45,6 +46,34 @@ class PlanEnum(str, enum.Enum):
     base = "base"
     pro = "pro"
     enterprise = "enterprise"
+
+
+class PlanCodeStr(str):
+    """رشته‌ی کد پلن که مثل Enum ویژگی `.value` هم دارد (سازگاری با کدهای قدیمی)."""
+
+    @property
+    def value(self) -> str:
+        return str(self)
+
+
+class PlanCode(TypeDecorator):
+    """
+    کد پلن به‌صورت رشته در دیتابیس ذخیره می‌شود تا ادمین بتواند پلن جدید بسازد.
+    مقادیر قدیمی PlanEnum (free/base/pro/enterprise) همچنان معتبرند.
+    """
+
+    impl = String(50)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, enum.Enum):
+            value = value.value
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        return None if value is None else PlanCodeStr(value)
 
 
 class RoleEnum(str, enum.Enum):
@@ -176,9 +205,7 @@ class User(Base):
         Enum(RoleEnum), default=RoleEnum.user, nullable=False
     )
 
-    plan: Mapped[PlanEnum] = mapped_column(
-        Enum(PlanEnum), default=PlanEnum.free, nullable=False
-    )
+    plan: Mapped[str] = mapped_column(PlanCode, default="free", nullable=False)
     plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -299,8 +326,9 @@ class Transaction(Base):
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
-    plan: Mapped[PlanEnum] = mapped_column(Enum(PlanEnum), nullable=False)
+    plan: Mapped[str] = mapped_column(PlanCode, nullable=False)
     amount_toman: Mapped[int] = mapped_column(Integer, nullable=False)
+    billing_period: Mapped[str] = mapped_column(String(10), default="monthly", nullable=False)
 
     provider: Mapped[PaymentProvider] = mapped_column(Enum(PaymentProvider), nullable=False)
     status: Mapped[PaymentStatus] = mapped_column(
@@ -326,6 +354,36 @@ class Transaction(Base):
     )
 
 
+class PlanDefinition(Base):
+    """تعریف پلن‌ها؛ توسط ادمین از داشبورد قابل ویرایش است."""
+
+    __tablename__ = "plan_definitions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    name_fa: Mapped[str] = mapped_column(String(100), nullable=False)
+    description_fa: Mapped[str] = mapped_column(String(300), default="", nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_popular: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # None = این دوره‌ی پرداخت عرضه نمی‌شود؛ 0 = رایگان
+    price_monthly_toman: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    price_yearly_toman: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    features: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    sections: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+
+    # None = نامحدود
+    max_speech_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    max_audio_seconds_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
+    )
+
+
 class Subscription(Base):
     __tablename__ = "subscriptions"
 
@@ -333,7 +391,7 @@ class Subscription(Base):
     user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    plan: Mapped[PlanEnum] = mapped_column(Enum(PlanEnum), nullable=False)
+    plan: Mapped[str] = mapped_column(PlanCode, nullable=False)
     status: Mapped[SubscriptionStatus] = mapped_column(
         Enum(SubscriptionStatus), default=SubscriptionStatus.active, nullable=False, index=True
     )
@@ -364,7 +422,7 @@ class Invoice(Base):
     transaction_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False
     )
-    plan: Mapped[PlanEnum] = mapped_column(Enum(PlanEnum), nullable=False)
+    plan: Mapped[str] = mapped_column(PlanCode, nullable=False)
     amount_toman: Mapped[int] = mapped_column(Integer, nullable=False)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
 
@@ -686,7 +744,6 @@ class LearningLevel(Base):
         back_populates="level", cascade="all, delete-orphan"
     )
 
-
 class IraqiScenario(Base):
     __tablename__ = "iraqi_scenarios"
 
@@ -694,13 +751,24 @@ class IraqiScenario(Base):
     level_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("learning_levels.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    slug: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True, index=True)
     category: Mapped[ScenarioCategory] = mapped_column(Enum(ScenarioCategory), nullable=False)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     title_fa: Mapped[str] = mapped_column(String(255), nullable=False)
+    title_iq: Mapped[str | None] = mapped_column(String(255), nullable=True)
     description_fa: Mapped[str] = mapped_column(Text, nullable=False)
+    situation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    objectives: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     key_vocabulary: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    model_dialogue: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     practice_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    success_criteria: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    common_mistakes: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    cultural_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    difficulty: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    estimated_minutes: Mapped[int] = mapped_column(Integer, default=8, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    content_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     level: Mapped["LearningLevel"] = relationship(back_populates="scenarios")
 

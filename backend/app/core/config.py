@@ -122,13 +122,13 @@ class Settings(BaseSettings):
             if self.payment_provider == "demo":
                 raise ValueError(
                     "PAYMENT_PROVIDER=demo is not allowed in production. "
-                    "Set PAYMENT_PROVIDER=zarinpal with real credentials."
+                    "Set PAYMENT_PROVIDER=zarinpal (or both) with real credentials."
                 )
             if not self.cookie_secure:
                 raise ValueError(
                     "COOKIE_SECURE must be true in production (requires HTTPS)."
                 )
-            if self.payment_provider == "zarinpal" and not self.zarinpal_merchant_id:
+            if self.payment_provider in ("zarinpal", "both") and not self.zarinpal_merchant_id:
                 raise ValueError(
                     "ZARINPAL_MERCHANT_ID is required when "
                     "PAYMENT_PROVIDER=zarinpal in production."
@@ -169,6 +169,15 @@ class Settings(BaseSettings):
             for item in self.allowed_hosts.split(",")
             if item.strip()
         ]
+
+    @property
+    def demo_payment_allowed(self) -> bool:
+        """پرداخت آزمایشی فقط خارج از production مجاز است (وگرنه هر کسی رایگان پلن می‌گیرد)."""
+        return self.payment_provider in ("demo", "both") and not self.is_production
+
+    @property
+    def zarinpal_available(self) -> bool:
+        return self.payment_provider in ("zarinpal", "both") and bool(self.zarinpal_merchant_id)
 
     @property
     def is_production(self) -> bool:

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.db import get_db
-from app.core.models import Transaction, User
+from app.core.models import PaymentProvider, Transaction, User
 from app.routers.auth import get_current_user
 from app.schemas.billing import (
     CheckoutRequest,
@@ -46,7 +46,7 @@ def checkout(
 ):
     try:
         txn, payment_url = billing_service.create_checkout(
-            db, current_user, payload.plan, _client_ip(request)
+            db, current_user, payload.plan, payload.period, payload.provider, _client_ip(request)
         )
     except billing_service.BillingError as exc:
         raise HTTPException(exc.status_code, exc.message)
@@ -77,8 +77,10 @@ def zarinpal_callback(
 
 @router.get("/demo-pay")
 def demo_pay(authority: str = Query(...), db: Session = Depends(get_db)):
+    if not settings.demo_payment_allowed:
+        raise HTTPException(403, "پرداخت آزمایشی در این محیط غیرفعال است.")
     txn = db.execute(select(Transaction).where(Transaction.authority == authority)).scalar_one_or_none()
-    if txn is None:
+    if txn is None or txn.provider != PaymentProvider.demo:
         raise HTTPException(404, "تراکنش یافت نشد.")
     result_txn = billing_service.process_callback(db, authority, "OK", "demo")
     st = "success" if result_txn.status.value == "paid" else "failed"

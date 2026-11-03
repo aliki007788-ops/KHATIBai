@@ -21,18 +21,15 @@ from app.core.models import (
     Invoice,
     PaymentProvider,
     PaymentStatus,
-    PlanEnum,
     Subscription,
     SubscriptionStatus,
     Transaction,
     User,
 )
-from app.core.plans import get_plan_limits
-from app.services import zarinpal
+from app.services import plan_service, zarinpal
 
 logger = logging.getLogger("khatib.billing")
 
-SUBSCRIPTION_DURATION_DAYS = 30
 DUPLICATE_CHECKOUT_WINDOW_MINUTES = 15
 
 
@@ -48,52 +45,84 @@ def _generate_invoice_number(db: Session) -> str:
     return f"INV-{today}-{uuid.uuid4().hex[:8].upper()}"
 
 
-def create_checkout(db: Session, user: User, plan: PlanEnum, request_ip: str) -> tuple[Transaction, str]:
-    if plan == PlanEnum.free:
-        raise BillingError("پلن رایگان نیازی به پرداخت ندارد.")
+def _resolve_provider(requested: str | None) -> str:
+    available = []
+    if settings.zarinpal_available:
+        available.append("zarinpal")
+    if settings.demo_payment_allowed:
+        available.append("demo")
+    if not available:
+        raise BillingError("هیچ روش پرداختی فعال نیست. تنظیمات پرداخت سرور را بررسی کنید.", 503)
+    if requested is None:
+        return available[0]
+    if requested not in available:
+        raise BillingError("این روش پرداخت فعال نیست.", 400)
+    return requested
 
-    limits = get_plan_limits(plan)
-    if limits.price_toman <= 0:
-        raise BillingError("این پلن قابل خرید نیست.")
+
+def create_checkout(
+    db: Session,
+    user: User,
+    plan_code: str,
+    period: str,
+    provider: str | None,
+    request_ip: str,
+) -> tuple[Transaction, str]:
+    plan = plan_service.get_plan(db, plan_code)
+    if plan is None or not plan.is_active:
+        raise BillingError("پلن یافت نشد یا فعال نیست.", 404)
+    if period not in plan_service.PERIOD_DAYS:
+        raise BillingError("دوره‌ی پرداخت نامعتبر است.")
+
+    price = plan_service.price_for(plan, period)
+    if price is None:
+        raise BillingError("این دوره‌ی پرداخت برای این پلن عرضه نمی‌شود.")
+    if price <= 0:
+        raise BillingError("این پلن رایگان است و نیازی به پرداخت ندارد.")
+
+    provider_id = _resolve_provider(provider)
+    period_fa = "سالانه" if period == "yearly" else "ماهانه"
 
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=DUPLICATE_CHECKOUT_WINDOW_MINUTES)
     existing = db.execute(
         select(Transaction).where(
             Transaction.user_id == user.id,
-            Transaction.plan == plan,
+            Transaction.plan == plan.code,
+            Transaction.billing_period == period,
+            Transaction.provider == PaymentProvider(provider_id),
+            Transaction.amount_toman == price,
             Transaction.status.in_([PaymentStatus.pending, PaymentStatus.redirected]),
             Transaction.created_at >= cutoff,
         ).order_by(Transaction.created_at.desc())
     ).scalars().first()
 
     if existing and existing.authority:
-        payment_url = _build_gateway_url(existing.authority)
-        return existing, payment_url
-
-    idempotency_key = uuid.uuid4().hex
+        if existing.provider == PaymentProvider.demo:
+            return existing, f"/api/billing/demo-pay?authority={existing.authority}"
+        return existing, _build_gateway_url(existing.authority)
 
     txn = Transaction(
         user_id=user.id,
-        plan=plan,
-        amount_toman=limits.price_toman,
-        provider=PaymentProvider(settings.payment_provider),
+        plan=plan.code,
+        billing_period=period,
+        amount_toman=price,
+        provider=PaymentProvider(provider_id),
         status=PaymentStatus.created,
-        idempotency_key=idempotency_key,
+        idempotency_key=uuid.uuid4().hex,
     )
     db.add(txn)
     db.flush()
 
-    if settings.payment_provider == "demo":
+    if provider_id == "demo":
         txn.status = PaymentStatus.pending
         txn.authority = f"demo-{txn.id}"
         db.commit()
-        payment_url = f"/api/billing/demo-pay?authority={txn.authority}"
-        return txn, payment_url
+        return txn, f"/api/billing/demo-pay?authority={txn.authority}"
 
     try:
         result = zarinpal.request_payment(
-            amount_toman=limits.price_toman,
-            description=f"خرید پلن {limits.label_fa} - خطیب",
+            amount_toman=price,
+            description=f"خرید پلن {plan.name_fa} ({period_fa}) - خطیب",
             callback_url=settings.zarinpal_callback_url,
         )
     except zarinpal.ZarinPalError as exc:
@@ -105,7 +134,7 @@ def create_checkout(db: Session, user: User, plan: PlanEnum, request_ip: str) ->
     txn.authority = result.authority
     txn.status = PaymentStatus.redirected
     db.add(AuditLog(user_id=user.id, action="checkout_created",
-                     detail=f"plan={plan.value} amount={limits.price_toman}", ip_address=request_ip))
+                     detail=f"plan={plan.code} period={period} amount={price}", ip_address=request_ip))
     db.commit()
 
     return txn, result.payment_url
@@ -183,7 +212,8 @@ def _activate_subscription(db: Session, txn: Transaction) -> None:
             base_start = sub.expires_at
         sub.status = SubscriptionStatus.expired
 
-    new_expiry = base_start + timedelta(days=SUBSCRIPTION_DURATION_DAYS)
+    days = plan_service.PERIOD_DAYS.get(txn.billing_period or "monthly", 30)
+    new_expiry = base_start + timedelta(days=days)
 
     new_sub = Subscription(
         user_id=txn.user_id,
@@ -237,7 +267,7 @@ def expire_due_subscriptions(db: Session) -> int:
         sub.status = SubscriptionStatus.expired
         user = db.get(User, sub.user_id)
         if user and user.plan == sub.plan:
-            user.plan = PlanEnum.free
+            user.plan = "free"
             user.plan_expires_at = None
         count += 1
 

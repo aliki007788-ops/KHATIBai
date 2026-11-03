@@ -5,10 +5,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.admin_dependencies import require_admin
+from app.core.config import settings
 from app.core.db import get_db
 from app.core.models import (
     AuditLog,
-    PlanEnum,
+    RoleEnum,
     Subscription,
     SubscriptionStatus,
     Transaction,
@@ -19,7 +20,9 @@ from app.schemas.admin import (
     AdminUserResponse,
     SetUserActiveRequest,
     SetUserPlanRequest,
+    SetUserRoleRequest,
 )
+from app.services import plan_service
 from app.services.admin_service import get_admin_stats
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -64,12 +67,33 @@ def set_user_plan(
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(404, "کاربر یافت نشد.")
-    try:
-        user.plan = PlanEnum(payload.plan)
-    except ValueError:
+    if plan_service.get_plan(db, payload.plan) is None:
         raise HTTPException(400, "پلن نامعتبر است.")
+    user.plan = payload.plan
     db.add(AuditLog(user_id=admin.id, action="admin_set_user_plan",
                     detail=f"target_user={user.id};plan={user.plan.value}"))
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.patch("/users/{user_id}/role", response_model=AdminUserResponse)
+def set_user_role(
+    user_id: str,
+    payload: SetUserRoleRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(404, "کاربر یافت نشد.")
+    if user.id == admin.id:
+        raise HTTPException(400, "مدیر نمی‌تواند نقش خودش را تغییر دهد.")
+    if user.role == RoleEnum.superadmin:
+        raise HTTPException(403, "نقش مدیر ارشد قابل تغییر نیست.")
+    user.role = RoleEnum(payload.role)
+    db.add(AuditLog(user_id=admin.id, action="admin_set_user_role",
+                    detail=f"target_user={user.id};role={payload.role}"))
     db.commit()
     db.refresh(user)
     return user
@@ -93,6 +117,26 @@ def set_user_active(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.get("/system")
+def system_status(_: User = Depends(require_admin)):
+    """وضعیت واقعی تنظیمات سرور (فقط‌خواندنی؛ هیچ کلید مخفی برنمی‌گردد)."""
+    return {
+        "environment": settings.environment,
+        "database": "sqlite" if settings.database_url.startswith("sqlite") else "postgresql/other",
+        "payment_provider": settings.payment_provider,
+        "demo_payment_allowed": settings.demo_payment_allowed,
+        "zarinpal_configured": bool(settings.zarinpal_merchant_id),
+        "zarinpal_available": settings.zarinpal_available,
+        "zarinpal_sandbox": settings.zarinpal_sandbox,
+        "zarinpal_callback_url": settings.zarinpal_callback_url or None,
+        "ai_configured": bool(settings.ai_api_key),
+        "ai_model": settings.ai_model,
+        "storage_backend": settings.storage_backend,
+        "cookie_secure": settings.cookie_secure,
+        "frontend_url": settings.frontend_url,
+    }
 
 
 @router.get("/audit")
