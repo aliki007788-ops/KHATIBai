@@ -18,6 +18,7 @@ from app.core.models import (
     UserScenarioProgress,
 )
 from app.services import ai as ai_service
+from app.services import iraqi_coach
 
 logger = logging.getLogger("khatib.chat")
 
@@ -96,9 +97,7 @@ def send_message(db: Session, user: User, conversation_id: str, text: str) -> Me
     }
 
     try:
-        ai_reply = ai_service.chat_iraqi_coach(
-            db, user.id, text, history_summary=history_summary
-        )
+        ai_reply = iraqi_coach.coach_reply(db, user.id, conv.id, text, history_summary=history_summary)
         reply_text = ai_reply.reply
         feedback["user_iraqi"] = (getattr(ai_reply, "user_iraqi", None) or "").strip()
         feedback["corrections"] = list(ai_reply.corrections or [])

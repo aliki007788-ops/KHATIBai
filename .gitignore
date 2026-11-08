@@ -8,3 +8,6 @@ build/
 .turbo/
 *.pyc
 _backup_*/
+khatib-upgrade-OLD-do-not-use/
+khatib-plans/
+*.xlsx

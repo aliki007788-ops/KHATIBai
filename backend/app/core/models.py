@@ -765,6 +765,7 @@ class IraqiScenario(Base):
     success_criteria: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     common_mistakes: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     cultural_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    needs_review: Mapped[list | None] = mapped_column(JSON, nullable=True)
     difficulty: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     estimated_minutes: Mapped[int] = mapped_column(Integer, default=8, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

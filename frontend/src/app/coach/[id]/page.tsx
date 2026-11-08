@@ -1,409 +1,68 @@
 "use client";
 
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AuthGuard } from "@/components/layout/AuthGuard";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Spinner } from "@/components/ui/Spinner";
-import {
-  useConversation,
-  useSendMessage,
-  useDeleteConversation,
-} from "@/features/chat/hooks";
-import Link from "next/link";
-import {
-  ArrowRight,
-  Send,
-  Trash2,
-  Mic,
-  Square,
-  Volume2,
-  VolumeX,
-  BookOpen,
-  Sparkles,
-  AlertCircle,
-  Lightbulb,
-  Library,
-} from "lucide-react";
+import { useConversation, useSendMessage, useDeleteConversation } from "@/features/chat/hooks";
+import { useConversationScenario, useFinishScenario } from "@/features/learning/iraqi";
+import { useSpeechToText } from "@/features/speech/useSpeechToText";
+import { toPersianNumber } from "@/lib/utils/number";
+import { ArrowRight, BookOpen, CheckCircle2, ChevronDown, Mic, Send, Square, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import type { CoachFeedback } from "@/types/chat";
 
-function parseFeedbackFromContent(content: string): CoachFeedback {
-  const corrections: string[] = [];
-  const suggestions: string[] = [];
-  const vocabulary: string[] = [];
-  let notes: string | null = null;
-
-  const corrMatch = content.match(/📝\s*اصلاحات:\s*([\s\S]*?)(?=\n\n✨|\n\n📚|\n\n💡|$)/);
-  if (corrMatch) {
-    corrections.push(
-      ...corrMatch[1]
-        .split("\n")
-        .map((l) => l.replace(/^[•\-\*]\s*/, "").trim())
-        .filter(Boolean)
-    );
-  }
-  const sugMatch = content.match(/✨\s*پیشنهادها:\s*([\s\S]*?)(?=\n\n📚|\n\n💡|$)/);
-  if (sugMatch) {
-    suggestions.push(
-      ...sugMatch[1]
-        .split("\n")
-        .map((l) => l.replace(/^[•\-\*]\s*/, "").trim())
-        .filter(Boolean)
-    );
-  }
-  const vocabMatch = content.match(/📚\s*واژگان:\s*([^\n]+)/);
-  if (vocabMatch) {
-    vocabulary.push(
-      ...vocabMatch[1]
-        .split(/[·|,،]/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-    );
-  }
-  const notesMatch = content.match(/💡\s*(.+)$/m);
-  if (notesMatch) notes = notesMatch[1].trim();
-
-  return { corrections, suggestions, vocabulary, notes };
-}
-
-function stripFeedbackFromContent(content: string): string {
-  return content
-    .replace(/\n\n📝\s*اصلاحات:[\s\S]*$/, "")
-    .replace(/\n\n✨\s*پیشنهادها:[\s\S]*$/, "")
-    .replace(/\n\n📚\s*واژگان:[\s\S]*$/, "")
-    .replace(/\n\n💡[\s\S]*$/, "")
-    .trim();
-}
-
-function FeedbackPanel({ feedback }: { feedback: CoachFeedback }) {
-  const has =
-    feedback.corrections.length > 0 ||
-    feedback.suggestions.length > 0 ||
-    feedback.vocabulary.length > 0 ||
-    !!feedback.notes;
-  if (!has) return null;
-
-  return (
-    <div className="mt-2 space-y-2 rounded-2xl border border-[var(--border-color)] bg-[var(--card-bg-solid)] p-3">
-      {feedback.corrections.length > 0 && (
-        <div>
-          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-amber-500">
-            <AlertCircle className="h-3.5 w-3.5" />
-            اصلاحات
-          </div>
-          <ul className="space-y-1">
-            {feedback.corrections.map((c, i) => (
-              <li key={i} className="text-xs leading-relaxed text-[var(--foreground)]/75">
-                • {c}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {feedback.suggestions.length > 0 && (
-        <div>
-          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-[var(--primary)]">
-            <Lightbulb className="h-3.5 w-3.5" />
-            پیشنهاد بهتر
-          </div>
-          <ul className="space-y-1">
-            {feedback.suggestions.map((s, i) => (
-              <li key={i} className="text-xs leading-relaxed text-[var(--foreground)]/75">
-                • {s}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {feedback.vocabulary.length > 0 && (
-        <div>
-          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-500">
-            <Library className="h-3.5 w-3.5" />
-            واژگان عراقی
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {feedback.vocabulary.map((v, i) => (
-              <span
-                key={i}
-                className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-600 dark:text-emerald-400"
-              >
-                {v}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-      {feedback.notes && (
-        <p className="text-[11px] leading-relaxed text-[var(--foreground)]/55">
-          💡 {feedback.notes}
-        </p>
-      )}
-    </div>
-  );
-}
-
-type SpeechRecognitionType = typeof window extends { webkitSpeechRecognition: infer T }
-  ? T
-  : any;
-
-export default function CoachChatPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function CoachChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const { data, isLoading, isError, refetch } = useConversation(id);
+  const { data: scenario } = useConversationScenario(id);
+  const finish = useFinishScenario();
   const send = useSendMessage(id);
   const del = useDeleteConversation();
 
   const [text, setText] = useState("");
-  const [isListening, setIsListening] = useState(false);
-  const [interimText, setInterimText] = useState("");
-  const [micError, setMicError] = useState<string | null>(null);
-  const [ttsEnabled, setTtsEnabled] = useState(true);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [latestFeedback, setLatestFeedback] = useState<CoachFeedback | null>(null);
-  const [latestFeedbackMsgId, setLatestFeedbackMsgId] = useState<string | null>(null);
-
+  const [panelOpen, setPanelOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
-  const isListeningRef = useRef(false);
-  const lastSpokenIdRef = useRef<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Keep ref in sync
-  useEffect(() => {
-    isListeningRef.current = isListening;
-  }, [isListening]);
+  // تشخیص گفتار: متن را در کادر می‌گذارد تا کاربر قبل از ارسال ببیند و ویرایش کند
+  const stt = useSpeechToText((t) => setText(t), "ar-IQ");
 
-  // Scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [data?.messages?.length, send.isPending, interimText]);
+  }, [data?.messages?.length, send.isPending]);
 
-  // Speak text with browser TTS
-  const speak = useCallback(
-    (content: string) => {
-      if (!ttsEnabled || typeof window === "undefined" || !window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(content);
-      // Prefer Arabic/Iraqi-like voice if available, else Persian, else default
-      const voices = window.speechSynthesis.getVoices();
-      const preferred =
-        voices.find((v) => v.lang.startsWith("ar")) ||
-        voices.find((v) => v.lang.startsWith("fa")) ||
-        voices.find((v) => v.lang.startsWith("en"));
-      if (preferred) utter.voice = preferred;
-      utter.lang = preferred?.lang || "ar-IQ";
-      utter.rate = 0.92;
-      utter.onstart = () => setIsSpeaking(true);
-      utter.onend = () => {
-        setIsSpeaking(false);
-        // Resume listening if still active
-        if (isListeningRef.current && recognitionRef.current) {
-          try {
-            recognitionRef.current.start();
-          } catch {
-            /* already started */
-          }
-        }
-      };
-      utter.onerror = () => setIsSpeaking(false);
-      window.speechSynthesis.speak(utter);
-    },
-    [ttsEnabled]
-  );
+  const userCount = data?.messages?.filter((m) => m.role === "user").length ?? 0;
+  const need = scenario?.min_messages_to_complete ?? 0;
+  const canFinish = !!scenario && scenario.status !== "completed" && userCount >= need;
 
-  // Auto-speak new assistant messages
-  useEffect(() => {
-    if (!data?.messages?.length || !ttsEnabled) return;
-    const last = data.messages[data.messages.length - 1];
-    if (
-      last &&
-      (last.role === "assistant" || last.role === "coach") &&
-      last.id !== lastSpokenIdRef.current
-    ) {
-      lastSpokenIdRef.current = last.id;
-      speak(last.content);
-    }
-  }, [data?.messages, ttsEnabled, speak]);
-
-  // Setup SpeechRecognition
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const SR =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) {
-      setMicError("مرورگر شما از تشخیص گفتار پشتیبانی نمی‌کند. از Chrome استفاده کنید.");
-      return;
-    }
-
-    const recognition = new SR();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "fa-IR"; // user speaks Persian; coach teaches Iraqi
-
-    recognition.onresult = (event: any) => {
-      let interim = "";
-      let finalText = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalText += transcript;
-        } else {
-          interim += transcript;
-        }
-      }
-      if (interim) setInterimText(interim);
-      if (finalText.trim()) {
-        setInterimText("");
-        setText((prev) => (prev ? prev + " " + finalText.trim() : finalText.trim()));
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      if (event.error === "not-allowed") {
-        setMicError("دسترسی میکروفون مسدود است. از تنظیمات مرورگر اجازه دهید.");
-        setIsListening(false);
-      } else if (event.error === "no-speech") {
-        // ignore
-      } else if (event.error !== "aborted") {
-        setMicError("خطای تشخیص گفتار: " + event.error);
-      }
-    };
-
-    recognition.onend = () => {
-      // Auto-restart if still supposed to be listening and not speaking
-      if (isListeningRef.current && !window.speechSynthesis?.speaking) {
-        try {
-          recognition.start();
-        } catch {
-          /* ignore */
-        }
-      } else {
-        setIsListening(false);
-      }
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => {
-      try {
-        recognition.stop();
-      } catch {
-        /* ignore */
-      }
-      window.speechSynthesis?.cancel();
-    };
-  }, []);
-
-  const toggleListening = () => {
-    setMicError(null);
-    if (isListening) {
-      isListeningRef.current = false;
-      setIsListening(false);
-      try {
-        recognitionRef.current?.stop();
-      } catch {
-        /* ignore */
-      }
-      setInterimText("");
-    } else {
-      // Stop TTS when user starts speaking
-      window.speechSynthesis?.cancel();
-      setIsSpeaking(false);
-      isListeningRef.current = true;
-      setIsListening(true);
-      try {
-        recognitionRef.current?.start();
-      } catch {
-        setMicError("نتوانست میکروفون را شروع کند. دوباره تلاش کنید.");
-        setIsListening(false);
-      }
-    }
-  };
-
-  const onSend = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const t = (text || interimText).trim();
+  const onSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    const t = text.trim();
     if (!t || send.isPending) return;
-
-    // Pause listening while sending
-    if (isListening) {
-      try {
-        recognitionRef.current?.stop();
-      } catch {
-        /* ignore */
-      }
-    }
-
-    send.mutate(t, {
-      onSuccess: (msg: any) => {
-        setText("");
-        setInterimText("");
-        if (msg && (msg.corrections || msg.suggestions || msg.vocabulary || msg.notes)) {
-          setLatestFeedback({
-            corrections: msg.corrections || [],
-            suggestions: msg.suggestions || [],
-            vocabulary: msg.vocabulary || [],
-            notes: msg.notes || null,
-          });
-          setLatestFeedbackMsgId(msg.id);
-        } else if (msg?.content) {
-          const parsed = parseFeedbackFromContent(msg.content);
-          setLatestFeedback(parsed);
-          setLatestFeedbackMsgId(msg.id);
-        }
-        if (isListeningRef.current) {
-          setTimeout(() => {
-            try {
-              recognitionRef.current?.start();
-            } catch {
-              /* ignore */
-            }
-          }, 400);
-        }
-      },
-    });
+    if (stt.isListening) stt.stop();
+    send.mutate(t, { onSuccess: () => setText("") });
   };
-
-  // Send interim+text on Enter handled by form
 
   return (
     <AuthGuard>
       <AppShell>
-        <div className="mx-auto flex h-[calc(100vh-7.5rem)] max-w-2xl flex-col">
-          {/* Header */}
+        <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col">
           <div className="mb-3 flex items-center justify-between gap-2">
             <Link
-              href="/learn"
-              className="flex items-center gap-1.5 text-sm text-[var(--foreground)]/50 transition hover:text-[var(--foreground)]"
+              href={scenario ? `/learn/scenario/${scenario.id}` : "/coach"}
+              className="flex items-center gap-1 text-sm text-[var(--foreground)]/60 hover:text-[var(--foreground)]"
             >
-              <ArrowRight className="h-4 w-4" />
-              مسیر یادگیری
+              <ArrowRight className="h-4 w-4" /> {scenario ? "مشاهده‌ی سناریو" : "گفتگوها"}
             </Link>
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setTtsEnabled((v) => {
-                    if (v) window.speechSynthesis?.cancel();
-                    return !v;
-                  });
-                }}
-                title={ttsEnabled ? "خاموش کردن صدای مربی" : "روشن کردن صدای مربی"}
-              >
-                {ttsEnabled ? (
-                  <Volume2 className="h-4 w-4 text-[var(--primary)]" />
-                ) : (
-                  <VolumeX className="h-4 w-4 text-[var(--foreground)]/40" />
-                )}
-              </Button>
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate text-sm font-semibold text-[var(--foreground)]">
+                {scenario?.title_fa || data?.title || "مربی AI"}
+              </h1>
               <Button
                 variant="ghost"
                 size="sm"
@@ -412,188 +71,140 @@ export default function CoachChatPage({
                   if (confirm("این گفتگو حذف شود؟")) del.mutate(id);
                 }}
               >
-                <Trash2 className="h-4 w-4 text-[var(--foreground)]/40" />
+                <Trash2 className="h-4 w-4 text-red-500" />
               </Button>
             </div>
           </div>
 
-          {/* Title bar */}
-          <div className="mb-3 flex items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--card-bg-solid)] px-4 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--primary)]/15 text-[var(--primary)]">
-              <BookOpen className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="truncate text-sm font-semibold text-[var(--foreground)]">
-                {data?.title || "جلسه تمرین با مربی"}
-              </h1>
-              <p className="text-[11px] text-[var(--foreground)]/45">
-                صحبت کنید یا بنویسید — مربی هم متنی و هم صوتی پاسخ می‌دهد
-              </p>
-            </div>
-            {isSpeaking && (
-              <span className="flex items-center gap-1.5 rounded-full bg-[var(--primary)]/10 px-2.5 py-1 text-[10px] font-medium text-[var(--primary)]">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--primary)]" />
-                در حال صحبت
-              </span>
-            )}
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto rounded-2xl border border-[var(--border-color)] bg-[var(--card-bg-solid)]/50 p-4">
-            {isLoading && (
-              <div className="space-y-3">
-                <Skeleton className="h-16 w-3/4 rounded-2xl" />
-                <Skeleton className="mr-auto h-12 w-1/2 rounded-2xl" />
-                <Skeleton className="h-20 w-2/3 rounded-2xl" />
-              </div>
-            )}
-            {isError && <ErrorState onRetry={() => refetch()} />}
-
-            {data && (
-              <div className="space-y-3">
-                {data.messages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
-                      <Sparkles className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-[var(--foreground)]">
-                        آماده شروع هستید
-                      </p>
-                      <p className="mt-1 max-w-xs text-xs text-[var(--foreground)]/50">
-                        دکمه میکروفون را بزنید و صحبت کنید، یا پیام بنویسید. مربی به شما بازخورد می‌دهد.
-                      </p>
+          {scenario && (
+            <div className="mb-3 rounded-xl border border-[var(--border-color)] bg-[var(--card-bg-solid)]">
+              <button
+                type="button"
+                onClick={() => setPanelOpen((v) => !v)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-sm"
+              >
+                <span className="flex items-center gap-2 font-medium text-[var(--foreground)]">
+                  <BookOpen className="h-4 w-4 text-[#8b5cf6]" /> راهنمای سناریو
+                </span>
+                <span className="flex items-center gap-3 text-xs text-[var(--foreground)]/55">
+                  <span>
+                    پیام‌های شما: {toPersianNumber(Math.min(userCount, need))} / {toPersianNumber(need)}
+                  </span>
+                  <ChevronDown className={cn("h-4 w-4 transition", panelOpen && "rotate-180")} />
+                </span>
+              </button>
+              {panelOpen && (
+                <div className="space-y-3 border-t border-[var(--border-color)] px-4 py-3 text-sm">
+                  <p className="leading-7 text-[var(--foreground)]/70">{scenario.situation}</p>
+                  <div>
+                    <div className="mb-1.5 text-xs font-medium text-[var(--foreground)]/50">هدف‌ها</div>
+                    <ul className="space-y-1 text-[var(--foreground)]/75">
+                      {scenario.objectives.map((o, i) => (
+                        <li key={i}>• {o}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <div className="mb-1.5 text-xs font-medium text-[var(--foreground)]/50">واژه‌های کلیدی (کلیک = گذاشتن در کادر پیام)</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {scenario.key_vocabulary.slice(0, 10).map((v, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          title={v.fa}
+                          onClick={() => setText((t) => (t ? `${t} ${v.iq}` : v.iq))}
+                          className="rounded-full border border-[var(--border-color)] px-2.5 py-1 text-xs hover:border-[#8b5cf6]"
+                          dir="rtl"
+                        >
+                          {v.iq} <span className="text-[var(--foreground)]/45">· {v.fa}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                )}
-
-                {data.messages.map((m) => {
-                  const isUser = m.role === "user";
-                  const clean = isUser ? m.content : stripFeedbackFromContent(m.content);
-                  const fb =
-                    !isUser && m.id === latestFeedbackMsgId && latestFeedback
-                      ? latestFeedback
-                      : !isUser
-                        ? parseFeedbackFromContent(m.content)
-                        : null;
-                  return (
-                    <div key={m.id} className={cn("max-w-[90%]", isUser ? "mr-auto" : "ml-auto")}>
-                      <div
-                        className={cn(
-                          "rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
-                          isUser
-                            ? "bg-[var(--primary)] text-white"
-                            : "border border-[var(--border-color)] bg-[var(--card-bg-solid)] text-[var(--foreground)]"
-                        )}
-                      >
-                        {!isUser && (
-                          <div className="mb-1 text-[10px] font-semibold text-[var(--primary)]">
-                            مربی
-                          </div>
-                        )}
-                        {clean}
-                        {!isUser && ttsEnabled && (
-                          <button
-                            type="button"
-                            onClick={() => speak(clean)}
-                            className="mt-1.5 flex items-center gap-1 text-[10px] text-[var(--foreground)]/40 transition hover:text-[var(--primary)]"
-                          >
-                            <Volume2 className="h-3 w-3" />
-                            پخش مجدد
-                          </button>
-                        )}
-                      </div>
-                      {fb && <FeedbackPanel feedback={fb} />}
-                    </div>
-                  );
-                })}
-
-                {send.isPending && (
-                  <div className="ml-auto flex max-w-[85%] items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--card-bg-solid)] px-4 py-3">
-                    <Spinner size="sm" />
-                    <span className="text-xs text-[var(--foreground)]/50">
-                      مربی در حال فکر کردن...
-                    </span>
-                  </div>
-                )}
-
-                {/* Live interim transcript */}
-                {interimText && (
-                  <div className="mr-auto max-w-[85%] rounded-2xl border border-dashed border-[var(--primary)]/40 bg-[var(--primary)]/5 px-4 py-2.5 text-sm text-[var(--foreground)]/60">
-                    <span className="mb-1 block text-[10px] font-medium text-[var(--primary)]">
-                      در حال شنیدن...
-                    </span>
-                    {interimText}
-                  </div>
-                )}
-
-                <div ref={bottomRef} />
-              </div>
-            )}
-          </div>
-
-          {/* Mic error */}
-          {micError && (
-            <div className="mt-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
-              {micError}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Input bar */}
-          <form onSubmit={onSend} className="mt-3 flex items-end gap-2">
-            <Button
-              type="button"
-              variant={isListening ? "primary" : "glass"}
-              onClick={toggleListening}
-              disabled={send.isPending}
-              className={cn(
-                "h-12 w-12 shrink-0 rounded-2xl p-0",
-                isListening && "animate-pulse bg-red-500 hover:bg-red-600"
-              )}
-              title={isListening ? "توقف ضبط" : "شروع صحبت با میکروفون"}
-            >
-              {isListening ? (
-                <Square className="h-5 w-5" />
-              ) : (
-                <Mic className="h-5 w-5" />
-              )}
-            </Button>
+          {(stt.error) && (
+            <div className="mb-3 rounded-xl border border-red-300/40 bg-red-500/10 p-3 text-sm text-red-500">{stt.error}</div>
+          )}
 
-            <div className="relative flex-1">
-              <input
-                ref={inputRef}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={
-                  isListening
-                    ? "در حال گوش دادن... می‌توانید ادامه دهید یا ارسال کنید"
-                    : "پیام بنویسید یا با میکروفون صحبت کنید..."
-                }
-                className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--card-bg-solid)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
-                disabled={send.isPending}
-                style={{ color: "var(--foreground)" }}
-              />
-              {isListening && (
-                <span className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center gap-1 text-[10px] text-red-400">
-                  <span className="h-1.5 w-1.5 animate-ping rounded-full bg-red-500" />
-                  زنده
-                </span>
+          {isLoading && <Skeleton className="w-full flex-1" />}
+          {isError && <ErrorState onRetry={() => refetch()} />}
+
+          {data && (
+            <>
+              <div className="flex-1 space-y-3 overflow-y-auto rounded-xl border border-[var(--border-color)] bg-[var(--card-bg-solid)] p-4">
+                {data.messages.length === 0 && (
+                  <p className="py-10 text-center text-sm text-[var(--foreground)]/40">
+                    پیام خود را بنویسید یا دکمه‌ی میکروفون را بزنید و به عراقی حرف بزنید
+                  </p>
+                )}
+                {data.messages.map((m) => (
+                  <div
+                    key={m.id}
+                    className={cn(
+                      "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-7",
+                      m.role === "user"
+                        ? "mr-auto bg-[#8b5cf6] text-white"
+                        : "ml-auto bg-[var(--foreground)]/8 text-[var(--foreground)]"
+                    )}
+                  >
+                    {m.content}
+                  </div>
+                ))}
+                {send.isPending && (
+                  <div className="ml-auto flex max-w-[85%] items-center gap-2 rounded-2xl bg-[var(--foreground)]/8 px-4 py-2.5">
+                    <Spinner size="sm" />
+                    <span className="text-xs text-[var(--foreground)]/55">مربی در حال پاسخ...</span>
+                  </div>
+                )}
+                <div ref={bottomRef} />
+              </div>
+
+              {canFinish && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#10b981]/30 bg-[#10b981]/10 px-4 py-2.5 text-sm">
+                  <span className="flex items-center gap-2 text-[#10b981]">
+                    <CheckCircle2 className="h-4 w-4" /> تمرین کافی انجام شد؛ می‌توانید سناریو را تکمیل کنید.
+                  </span>
+                  <Button
+                    size="sm"
+                    loading={finish.isPending}
+                    onClick={() =>
+                      scenario &&
+                      finish.mutate(scenario.id, { onSuccess: () => router.push(`/learn/${scenario.level_id}`) })
+                    }
+                  >
+                    تکمیل سناریو
+                  </Button>
+                </div>
               )}
-            </div>
 
-            <Button
-              type="submit"
-              loading={send.isPending}
-              disabled={!(text.trim() || interimText.trim())}
-              className="h-12 w-12 shrink-0 rounded-2xl p-0"
-            >
-              <Send className="h-5 w-5" />
-            </Button>
-          </form>
-
-          <p className="mt-2 text-center text-[10px] text-[var(--foreground)]/35">
-            میکروفون و پاسخ صوتی مربی همزمان کار می‌کنند · از Chrome برای بهترین نتیجه استفاده کنید
-          </p>
+              <form onSubmit={onSend} className="mt-3 flex gap-2">
+                <Button
+                  type="button"
+                  variant={stt.isListening ? "primary" : "glass"}
+                  onClick={stt.isListening ? stt.stop : stt.start}
+                  disabled={send.isPending || stt.isTranscribing || !stt.supported}
+                  title={stt.supported ? "حرف زدن (عربی عراقی)" : "مرورگر شما ضبط صدا ندارد؛ از Chrome یا Edge استفاده کنید"}
+                  className={cn("shrink-0 rounded-xl px-4", stt.isListening && "animate-pulse !bg-red-500 hover:!bg-red-600")}
+                >
+                  {stt.isListening ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                </Button>
+                <input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder={stt.isTranscribing ? "در حال تبدیل صدا به متن..." : stt.isListening ? "در حال گوش دادن... (برای پایان دوباره دکمه را بزنید)" : "جمله‌ی عراقی‌تان را بنویسید..."}
+                  className="flex-1 rounded-xl border border-[var(--border-color)] bg-[var(--background)] px-4 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[#8b5cf6]"
+                  disabled={send.isPending}
+                />
+                <Button type="submit" loading={send.isPending} disabled={!text.trim()}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </form>
+            </>
+          )}
         </div>
       </AppShell>
     </AuthGuard>
